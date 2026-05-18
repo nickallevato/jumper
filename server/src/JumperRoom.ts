@@ -14,12 +14,16 @@ type Input = { left: boolean; right: boolean; up: boolean; down: boolean; jump: 
 export class JumperRoom extends Room<JumperRoomState> {
   override maxClients = 32;
   private inputs = new Map<string, Input>();
+  private pendingJump = new Set<string>();
   private colorIndex = 0;
 
   override onCreate(): void {
     this.state = new JumperRoomState();
     this.setSimulationInterval((dt) => this.tick(dt), 1000 / TICK_RATE);
     this.onMessage("input", (client, input: Input) => {
+      // Latch jump: once set true, keep pending until tick consumes it
+      const prev = this.inputs.get(client.sessionId);
+      if (input.jump || prev?.jump) this.pendingJump.add(client.sessionId);
       this.inputs.set(client.sessionId, input);
     });
     console.log(`[JumperRoom] created (${this.roomId})`);
@@ -42,6 +46,7 @@ export class JumperRoom extends Room<JumperRoomState> {
     console.log(`[JumperRoom] player left: ${client.sessionId}`);
     this.state.players.delete(client.sessionId);
     this.inputs.delete(client.sessionId);
+    this.pendingJump.delete(client.sessionId);
   }
 
   private tick(dt: number): void {
@@ -63,10 +68,12 @@ export class JumperRoom extends Room<JumperRoomState> {
       if (player.jumpCooldown > 0) {
         player.jumpCooldown = Math.max(0, player.jumpCooldown - dt);
       }
-      if (input.jump && !player.isJumping && player.jumpCooldown <= 0) {
+      const wantsJump = this.pendingJump.has(sessionId);
+      if (wantsJump && !player.isJumping && player.jumpCooldown <= 0) {
         player.isJumping = true;
         player.velZ = JUMP_VELOCITY;
         player.jumpCooldown = JUMP_COOLDOWN_MS;
+        this.pendingJump.delete(sessionId);
       }
 
       if (player.isJumping) {

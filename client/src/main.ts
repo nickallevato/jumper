@@ -143,13 +143,14 @@ class GameScene extends Phaser.Scene {
     const pos = this.screenPos(player.x, player.y, player.z);
     const groundPos = this.screenPos(player.x, player.y, 0);
 
-    const shadow = this.add.ellipse(groundPos.x, groundPos.y + 4, 28, 10, 0x000000, 0.35).setDepth(1);
-    const body = this.add.circle(pos.x, pos.y, 14, player.color).setDepth(2);
+    const baseDepth = (player.x + player.y) * 10;
+    const shadow = this.add.ellipse(groundPos.x, groundPos.y + 4, 28, 10, 0x000000, 0.35).setDepth(baseDepth);
+    const body = this.add.circle(pos.x, pos.y, 14, player.color).setDepth(baseDepth + 1);
     body.setStrokeStyle(isSelf ? 3 : 1, isSelf ? 0xffffff : 0x333333);
     const label = this.add.text(pos.x, pos.y - 22, player.name || sessionId.slice(0, 4), {
       fontFamily: "monospace", fontSize: "11px", color: "#ffffff",
       backgroundColor: "#00000066", padding: { x: 2, y: 1 },
-    }).setOrigin(0.5, 1).setDepth(3);
+    }).setOrigin(0.5, 1).setDepth(baseDepth + 2);
 
     this.playerViews.set(sessionId, { shadow, body, label });
 
@@ -163,10 +164,14 @@ class GameScene extends Phaser.Scene {
       view.shadow.setScale(shadowScale);
       view.body.setPosition(p.x, p.y);
       view.body.setFillStyle(player.color);
-      // Squash/stretch: stretch up on ascent, squash on landing approach
       const stretchY = player.isJumping ? (player.velZ > 0 ? 1.3 : 0.85) : 1;
       view.body.setScale(1 / stretchY, stretchY);
       view.label.setPosition(p.x, p.y - 22);
+      // Jumping players sort above ground-level players at same (x,y)
+      const depth = (player.x + player.y) * 10 + player.z * 0.1;
+      view.shadow.setDepth(depth);
+      view.body.setDepth(depth + 1);
+      view.label.setDepth(depth + 2);
     });
   }
 
@@ -181,7 +186,7 @@ class GameScene extends Phaser.Scene {
 
   private updateCount(): void {
     const n = this.room?.state.players.size ?? 0;
-    this.playerCountText.setText(`Players: ${n}`);
+    this.playerCountText.setText(`${n}/? players`);
   }
 
   override update(): void {
