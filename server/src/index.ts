@@ -1,6 +1,6 @@
 import { Server } from "colyseus";
 import { WebSocketTransport } from "@colyseus/ws-transport";
-import { JumperRoom } from "./JumperRoom.js";
+import { JumperRoom } from "./JumperRoom";
 
 const PORT = Number(process.env.PORT ?? 2567);
 

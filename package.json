@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r --parallel --stream run dev",
-    "build": "pnpm -r run build",
+    "dev": "pnpm --filter @jumper/shared build && pnpm -r --parallel --stream run dev",
+    "build": "pnpm --filter @jumper/shared build && pnpm -r run build",
     "typecheck": "pnpm -r run typecheck"
   },
   "devDependencies": {

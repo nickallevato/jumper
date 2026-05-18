@@ -2,7 +2,9 @@ import Phaser from "phaser";
 import { Client, Room, getStateCallbacks } from "colyseus.js";
 import type { JumperRoomState, PlayerState } from "@jumper/shared";
 
-const SERVER_URL = `ws://${window.location.hostname}:2567`;
+// In dev, Vite proxies Colyseus traffic from the page port to the game server.
+// In production, serve client and server from the same origin.
+const SERVER_URL = `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`;
 
 // Isometric projection
 const TILE_W = 64;

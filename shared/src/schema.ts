@@ -1,18 +1,33 @@
-import { Schema, MapSchema, type } from "@colyseus/schema";
+import { Schema, MapSchema, defineTypes } from "@colyseus/schema";
 
 export class PlayerState extends Schema {
-  @type("string") id: string = "";
-  @type("number") x: number = 0;
-  @type("number") y: number = 0;
-  @type("number") z: number = 0;
-  @type("boolean") isJumping: boolean = false;
-  @type("string") skin: string = "default";
-  @type("number") color: number = 0xffffff;
-  @type("string") name: string = "";
-  @type("number") velZ: number = 0;
-  @type("number") jumpCooldown: number = 0;
+  id: string = "";
+  x: number = 0;
+  y: number = 0;
+  z: number = 0;
+  isJumping: boolean = false;
+  skin: string = "default";
+  color: number = 0xffffff;
+  name: string = "";
+  velZ: number = 0;
+  jumpCooldown: number = 0;
 }
+defineTypes(PlayerState, {
+  id: "string",
+  x: "number",
+  y: "number",
+  z: "number",
+  isJumping: "boolean",
+  skin: "string",
+  color: "number",
+  name: "string",
+  velZ: "number",
+  jumpCooldown: "number",
+});
 
 export class JumperRoomState extends Schema {
-  @type({ map: PlayerState }) players = new MapSchema<PlayerState>();
+  players = new MapSchema<PlayerState>();
 }
+defineTypes(JumperRoomState, {
+  players: { map: PlayerState },
+});

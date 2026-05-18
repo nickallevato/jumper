@@ -1,1 +1,1 @@
-export { PlayerState, JumperRoomState } from "./schema.js";
+export { PlayerState, JumperRoomState } from "./schema";
