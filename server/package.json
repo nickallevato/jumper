@@ -1,0 +1,23 @@
+{
+  "name": "@jumper/server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@colyseus/schema": "^3.0.0",
+    "@colyseus/ws-transport": "^0.17.7",
+    "@jumper/shared": "workspace:*",
+    "colyseus": "^0.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
