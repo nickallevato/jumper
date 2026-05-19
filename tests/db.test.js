@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { initDb, getDb } from '../server/db.js'
-import { join } from 'path'
-import { unlinkSync, existsSync } from 'fs'
 
 const TEST_DB = ':memory:'
 

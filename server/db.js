@@ -8,10 +8,23 @@ export function initDb(path = './jumper.db') {
   db.pragma('foreign_keys = ON')
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS items (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      name           TEXT NOT NULL,
+      passive_effect TEXT NOT NULL,
+      world_trigger  TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS cosmetics (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      name             TEXT NOT NULL,
+      unlock_condition TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS players (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       token       TEXT    UNIQUE NOT NULL,
-      cosmetic_id INTEGER NOT NULL DEFAULT 1,
+      cosmetic_id INTEGER NOT NULL DEFAULT 1 REFERENCES cosmetics(id),
       held_item_id INTEGER REFERENCES items(id),
       skill_level INTEGER NOT NULL DEFAULT 0,
       last_seen   DATETIME,
@@ -30,19 +43,6 @@ export function initDb(path = './jumper.db') {
       secret_id    TEXT    NOT NULL,
       discovered_at DATETIME NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (player_id, secret_id)
-    );
-
-    CREATE TABLE IF NOT EXISTS items (
-      id             INTEGER PRIMARY KEY AUTOINCREMENT,
-      name           TEXT NOT NULL,
-      passive_effect TEXT NOT NULL,
-      world_trigger  TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS cosmetics (
-      id               INTEGER PRIMARY KEY AUTOINCREMENT,
-      name             TEXT NOT NULL,
-      unlock_condition TEXT NOT NULL
     );
   `)
 
