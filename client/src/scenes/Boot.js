@@ -11,12 +11,22 @@ export class Boot extends Phaser.Scene {
       'connecting...', { color: '#ffffff', fontSize: '18px' }
     ).setOrigin(0.5)
 
-    const { token, profile } = await authenticate()
-    const socket = getSocket()
+    try {
+      const { token, profile } = await authenticate()
+      const socket = getSocket()
 
-    socket.emit(SOCKET_EVENTS.AUTH, { token })
-    socket.once(SOCKET_EVENTS.AUTH_OK, ({ playerId }) => {
-      this.scene.start('WorldScene', { playerId, profile, roomId: 'overworld' })
-    })
+      socket.on('connect_error', () => {
+        text.setText('connection failed — reload to try again')
+        text.setColor('#ff6b6b')
+      })
+
+      socket.emit(SOCKET_EVENTS.AUTH, { token })
+      socket.once(SOCKET_EVENTS.AUTH_OK, ({ playerId }) => {
+        this.scene.start('WorldScene', { playerId, profile, roomId: 'overworld' })
+      })
+    } catch (err) {
+      text.setText('could not reach server — reload to try again')
+      text.setColor('#ff6b6b')
+    }
   }
 }
