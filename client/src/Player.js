@@ -33,6 +33,7 @@ export class Player {
   update(dt, cursors, keys, grid) {
     const speed = MOVE_SPEED * dt
     let dx = 0, dy = 0
+    const wasOnGround = this.onGround
 
     if (cursors.left.isDown  || keys.a.isDown) dx -= speed
     if (cursors.right.isDown || keys.d.isDown) dx += speed
@@ -70,6 +71,35 @@ export class Player {
     }
 
     this._syncPosition()
+
+    // Fire discovery attempt callback on jump, dive, or move
+    if (Phaser.Input.Keyboard.JustDown(keys.space) && wasOnGround) {
+      this.onDiscoverAttempt?.({
+        action: 'jump',
+        wx: Math.floor(this.tx),
+        wy: Math.floor(this.ty),
+        wz: Math.floor(this.tz),
+        itemId: this.heldItem?.id ?? null,
+      })
+    }
+    if (cursors.down.isDown && !this.onGround) {
+      this.onDiscoverAttempt?.({
+        action: 'dive',
+        wx: Math.floor(this.tx),
+        wy: Math.floor(this.ty),
+        wz: Math.floor(this.tz),
+        itemId: this.heldItem?.id ?? null,
+      })
+    }
+    if (dx !== 0 || dy !== 0) {
+      this.onDiscoverAttempt?.({
+        action: 'move',
+        wx: Math.floor(this.tx),
+        wy: Math.floor(this.ty),
+        wz: 0,
+        itemId: this.heldItem?.id ?? null,
+      })
+    }
   }
 
   _syncPosition() {

@@ -30,6 +30,18 @@ export class WorldScene extends Phaser.Scene {
     this.isoMap = new IsoMap(this, OVERWORLD_GRID, originX, originY)
     this.player = new Player(this, 8, 8, this.profile)
 
+    this.player.onDiscoverAttempt = (payload) => {
+      this._socket.emit(E.DISCOVER, payload)
+    }
+
+    socket.on(E.DISCOVER_OK, ({ secretId, effect }) => {
+      console.log('Discovery:', secretId, effect)
+      this._showDiscoveryFlash(secretId)
+      if (this.profile) {
+        this.profile.discoveredSecrets = [...(this.profile.discoveredSecrets ?? []), secretId]
+      }
+    })
+
     this.cursors = this.input.keyboard.createCursorKeys()
     this.keys = this.input.keyboard.addKeys({
       w: Phaser.Input.Keyboard.KeyCodes.W,
@@ -140,10 +152,29 @@ export class WorldScene extends Phaser.Scene {
     for (const rp of this.remotePlayers.values()) rp.update()
   }
 
+  _showDiscoveryFlash(secretId) {
+    const text = this.add.text(
+      this.scale.width / 2,
+      this.scale.height / 2 - 60,
+      '✦ discovered',
+      { color: '#a6e3a1', fontSize: '22px', fontStyle: 'bold' }
+    ).setOrigin(0.5).setAlpha(0)
+
+    this.tweens.add({
+      targets: text,
+      alpha: { from: 1, to: 0 },
+      y: '-=40',
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => text.destroy(),
+    })
+  }
+
   shutdown() {
     const socket = getSocket()
     socket.off(E.JOIN_OK)
     socket.off(E.TICK)
     socket.off(E.ITEM_STATE)
+    socket.off(E.DISCOVER_OK)
   }
 }
