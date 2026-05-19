@@ -21,6 +21,15 @@ export function initDb(path = './jumper.db') {
       unlock_condition TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS world_items (
+      id      INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id INTEGER NOT NULL REFERENCES items(id),
+      room_id TEXT    NOT NULL,
+      wx      REAL    NOT NULL,
+      wy      REAL    NOT NULL,
+      wz      REAL    NOT NULL DEFAULT 0
+    );
+
     CREATE TABLE IF NOT EXISTS players (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       token       TEXT    UNIQUE NOT NULL,
