@@ -14,7 +14,10 @@ const OVERWORLD_GRID = Array.from({ length: 16 }, (_, ty) =>
 )
 
 export class WorldScene extends Phaser.Scene {
-  constructor() { super('WorldScene') }
+  constructor() {
+    super('WorldScene')
+    this._pickupCooldown = 0
+  }
 
   create(data) {
     this.playerId = data?.playerId
@@ -41,6 +44,9 @@ export class WorldScene extends Phaser.Scene {
     // Multiplayer
     this.remotePlayers = new Map()
     this._worldItemGfx = new Map()
+    this._heldItem = this.profile?.heldItem ?? null
+    this._pickupCooldown = 0
+    this._lastState = null
     const socket = getSocket()
     this._socket = socket
 
@@ -76,8 +82,10 @@ export class WorldScene extends Phaser.Scene {
 
     // Q = drop held item
     this.input.keyboard.on('keydown-Q', () => {
+      if (!this._heldItem) return
       const state = this.player.getState()
       this._socket.emit(E.ITEM_DROP, { x: state.x, y: state.y, z: state.z })
+      this._heldItem = null
     })
   }
 
@@ -105,17 +113,24 @@ export class WorldScene extends Phaser.Scene {
     const dt = delta / 1000
     this.player.update(dt, this.cursors, this.keys, OVERWORLD_GRID)
 
-    // Send position to server
+    // Send position to server (only when changed)
     const state = this.player.getState()
-    this._socket.emit(E.MOVE, state)
+    const last = this._lastState
+    if (!last || state.x !== last.x || state.y !== last.y || state.z !== last.z || state.facing !== last.facing) {
+      this._socket.emit(E.MOVE, state)
+      this._lastState = state
+    }
 
-    // Auto-pickup: within 0.8 tiles, empty-handed
-    if (!this.profile?.heldItem) {
+    // Auto-pickup: within 0.8 tiles, empty-handed, rate-limited
+    this._pickupCooldown = Math.max(0, this._pickupCooldown - delta)
+    if (!this._heldItem && this._pickupCooldown === 0) {
       for (const [worldItemId, g] of this._worldItemGfx) {
         const dx = Math.abs(this.player.tx - g._wx)
         const dy = Math.abs(this.player.ty - g._wy)
         if (dx < 0.8 && dy < 0.8) {
           this._socket.emit(E.ITEM_PICKUP, { worldItemId })
+          this._heldItem = { pending: true }   // optimistic: treat as holding until ITEM_STATE
+          this._pickupCooldown = 500
           break
         }
       }
@@ -123,5 +138,12 @@ export class WorldScene extends Phaser.Scene {
 
     // Interpolate remote players
     for (const rp of this.remotePlayers.values()) rp.update()
+  }
+
+  shutdown() {
+    const socket = getSocket()
+    socket.off(E.JOIN_OK)
+    socket.off(E.TICK)
+    socket.off(E.ITEM_STATE)
   }
 }
