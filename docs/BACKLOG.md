@@ -39,6 +39,14 @@ Library can render properly.
 ### 18. Idle bob animation — *Pillars 5 · Size S*
 Players gently bob/breathe when standing still. Cheap liveliness; reads as "alive" not frozen.
 
+### 19. World-event bell broadcast — *Pillars 1,4 · Size S*
+Ringing the Belltower bell flashes a banner to everyone in all rooms ("a bell tolls in the
+distance"). The cross-room social payoff from the original Belltower design.
+
+### 20. Fall-out recovery — *Pillars 6 · Size S*
+If a player drops below the floor (off a tall ledge in a follow-room), respawn at room spawn
+instead of falling forever. Safety net for vertical levels.
+
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
 original design ("unlocked by diving into a specific cracked floor tile"). Combines the dive verb
@@ -81,6 +89,8 @@ reveal now exist — this is unblocked.
 - ✓ Lantern reveal mechanic — hidden platforms (Grove) appear + become solid only while holding
   the Lantern; stepping-stone path across the pool to `secret_illuminated`.
 - ✓ Room player-count HUD — camera-fixed "N here" / "here alone", updated off the tick list.
+- ✓ Screen-relative WASD — W = straight up on screen (was a 45° grid axis); `screenToTileDir`
+  maps input intent to tile space (player-requested feel fix).
 
 ---
 

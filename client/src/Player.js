@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { toScreen } from './iso.js'
+import { toScreen, screenToTileDir } from './iso.js'
 import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
 import {
@@ -119,15 +119,17 @@ export class Player {
     const now = this.scene.time.now
     const ms  = dt * 1000
     const speed = MOVE_SPEED * dt
-    let dx = 0, dy = 0
     const wasOnGround = this.onGround
 
-    if (cursors.left.isDown  || keys.a.isDown) dx -= speed
-    if (cursors.right.isDown || keys.d.isDown) dx += speed
-    if (cursors.up.isDown    || keys.w.isDown) dy -= speed
-    if (cursors.down.isDown  || keys.s.isDown) dy += speed
-
-    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707 }
+    // Screen-relative input: W = straight up on screen, A/D = left/right, S = down.
+    let mx = 0, my = 0
+    if (cursors.left.isDown  || keys.a.isDown) mx -= 1
+    if (cursors.right.isDown || keys.d.isDown) mx += 1
+    if (cursors.up.isDown    || keys.w.isDown) my -= 1
+    if (cursors.down.isDown  || keys.s.isDown) my += 1
+    const dir = screenToTileDir(mx, my)
+    let dx = dir.dx * speed
+    let dy = dir.dy * speed
 
     const nx = this.tx + dx
     const ny = this.ty + dy

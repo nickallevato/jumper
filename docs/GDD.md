@@ -69,6 +69,8 @@ Base verb is **Jump**. Techniques are hidden and discovered by play:
 | Pogo (hidden) | Tap Space within 120ms of landing → boosted jump; chains higher | mastery |
 
 Tunables in `shared/constants.js`. Dive/fast-fall exists as a discovery action only.
+Movement is **screen-relative**: W moves straight up on screen (not along a 45° grid axis) —
+`screenToTileDir` (iso.js) maps WASD/arrow intent to a normalized tile-space direction.
 
 ## 7. Items (implemented)
 

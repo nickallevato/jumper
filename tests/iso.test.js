@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toScreen, toWorld, paintOrder } from '../client/src/iso.js'
+import { toScreen, toWorld, paintOrder, screenToTileDir } from '../client/src/iso.js'
 
 // TILE_W=64, TILE_H=32. ORIGIN assumed (0,0) for math tests.
 describe('iso', () => {
@@ -40,5 +40,34 @@ describe('iso', () => {
     const sorted = paintOrder(tiles)
     expect(sorted[0]).toEqual({ tx: 0, ty: 0 })
     expect(sorted[2]).toEqual({ tx: 2, ty: 2 })
+  })
+
+  it('screenToTileDir: no input → zero vector', () => {
+    expect(screenToTileDir(0, 0)).toEqual({ dx: 0, dy: 0 })
+  })
+
+  it('screenToTileDir: W (screen-up) moves straight up on screen', () => {
+    // tile dir for W is (-1,-1); feeding it back through toScreen must change only Y (up), not X.
+    const w = screenToTileDir(0, -1)
+    const a = toScreen(0, 0, 0, 0, 0)
+    const b = toScreen(w.dx, w.dy, 0, 0, 0)
+    expect(b.x).toBeCloseTo(a.x)      // no horizontal drift
+    expect(b.y).toBeLessThan(a.y)     // moves up
+  })
+
+  it('screenToTileDir: D (screen-right) moves straight right on screen', () => {
+    const d = screenToTileDir(1, 0)
+    const a = toScreen(0, 0, 0, 0, 0)
+    const b = toScreen(d.dx, d.dy, 0, 0, 0)
+    expect(b.y).toBeCloseTo(a.y)      // no vertical drift
+    expect(b.x).toBeGreaterThan(a.x)  // moves right
+  })
+
+  it('screenToTileDir: results are unit-length and W+D collapses to one tile axis', () => {
+    const w = screenToTileDir(0, -1)
+    expect(Math.hypot(w.dx, w.dy)).toBeCloseTo(1)
+    const wd = screenToTileDir(1, -1)   // up-right → pure -ty axis
+    expect(wd.dx).toBeCloseTo(0)
+    expect(wd.dy).toBeCloseTo(-1)
   })
 })
