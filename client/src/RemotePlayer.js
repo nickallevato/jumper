@@ -1,21 +1,14 @@
 import { toScreen } from './iso.js'
 import { TILE_H } from '../../shared/constants.js'
-
-const PALETTE = [0xf38ba8, 0xa6e3a1, 0xfab387, 0xcba6f7, 0x89dceb, 0xf9e2af]
-
-function colorFromId(id) {
-  let h = 5381
-  for (const c of String(id)) h = ((h << 5) + h + c.charCodeAt(0)) & 0x7fffffff
-  return PALETTE[h % PALETTE.length]
-}
+import { cosmeticById } from '../../shared/cosmetics.js'
 
 export class RemotePlayer {
-  constructor(scene, id, x, y, z) {
+  constructor(scene, id, x, y, z, cosmeticId = 1) {
     this.id = id
     this.tx = x; this.ty = y; this.tz = z
     this._targetX = x; this._targetY = y; this._targetZ = z
     this.scene = scene
-    this._color = colorFromId(id)
+    this.cosmeticId = cosmeticId
 
     const sg = scene.add.graphics()
     sg.fillStyle(0x000000, 0.28)
@@ -23,8 +16,8 @@ export class RemotePlayer {
     this.shadowGfx = sg
 
     const g = scene.add.graphics()
-    this._drawShape(g)
     this.gfx = g
+    this._drawShape()
 
     const ig = scene.add.graphics()
     this.indicatorGfx = ig
@@ -32,12 +25,18 @@ export class RemotePlayer {
     this._syncPosition()
   }
 
-  _drawShape(g) {
+  _drawShape() {
+    const c = cosmeticById(this.cosmeticId)
+    const g = this.gfx
     g.clear()
-    g.fillStyle(this._color, 1)
+    g.fillStyle(c.body, 1)
     g.fillCircle(0, -13, 10)
-    g.fillStyle(0xcdd6f4, 1)
+    g.fillStyle(c.head, 1)
     g.fillCircle(0, -27, 7)
+    if (c.accent != null) {
+      g.fillStyle(c.accent, 1)
+      g.fillCircle(0, -37, 2.5)   // accent marker above the head
+    }
     g.fillStyle(0x1e1e2e, 1)
     g.fillCircle(-3, -27, 1.5)
     g.fillCircle(3, -27, 1.5)
@@ -45,8 +44,12 @@ export class RemotePlayer {
     g.fillCircle(-2, -31, 2)
   }
 
-  updateTarget(x, y, z) {
+  updateTarget(x, y, z, cosmeticId) {
     this._targetX = x; this._targetY = y; this._targetZ = z
+    if (cosmeticId != null && cosmeticId !== this.cosmeticId) {
+      this.cosmeticId = cosmeticId
+      this._drawShape()
+    }
   }
 
   update() {

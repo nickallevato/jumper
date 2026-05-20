@@ -101,11 +101,14 @@ Client sends position on change; server broadcasts per-room player lists at 20 t
 (`TICK_MS=50`). Client interpolates remote players. Item world-state broadcast on change.
 Discoveries are private. Head-bounce pair detection runs in the server tick loop.
 
-## 10. Cosmetics
+## 10. Cosmetics (implemented — `shared/cosmetics.js`)
 
-Unlocked through discovery/areas, never bought or freely chosen. Catalog seeded; **visual
-rendering of cosmetic variants on the player sprite is NOT yet implemented** (everyone renders
-the default blob).
+Unlocked through discovery, never bought or freely chosen. The shared catalog (single source of
+truth for both the DB seed and rendering; id = array index + 1) defines body/head colors + an
+optional accent marker per look. Discovering a cosmetic-effect secret equips it server-side
+(`players.cosmetic_id`), broadcast to all clients; local + remote players render their palette,
+and the local player recolors live on discovery. Area-linked cosmetics (sky_blue/deep_crimson)
+are catalogued but only auto-equip via the cosmetic-effect path, not area unlock (refinement later).
 
 ## 11. Isometric Rendering (implemented)
 

@@ -11,10 +11,6 @@
 
 ## Now (next iteration)
 
-### 2. Cosmetic rendering — *Pillars 3 · Size M · Gap ✓✓*
-Render `cosmetic_id` as real palette/shape/accessory variants on the player + remote players.
-Makes "you are what you've done" actually visible. Currently unlocks are invisible.
-
 ### 3. The Belltower (first designed dungeon) — *Pillars 1,2,5 · Size M · Gap ✗ (depends on #1)*
 Tall vertical wall-kick shaft, ~4 tiles wide, spiraling ledges. Showcases the new wall-kick tech.
 First to ring the bell triggers a world event in the overworld. Depends on #1.
@@ -50,6 +46,8 @@ Hidden tiles that only render when a player holding the Lantern is nearby. Enabl
   to reach a high goal ledge; new use of the drop verb. (`secret_counterweight`)
 - ✓ Real dungeon rooms — room registry (`maps.js`), portal tiles, scene fade transitions,
   `dungeon_grove` starter dungeon; puzzle scoped to overworld.
+- ✓ Cosmetic rendering — shared cosmetics catalog (DB seed + render source of truth); secrets
+  equip `cosmetic_id`; local + remote players render palette + accent; live recolor on discovery.
 
 ---
 

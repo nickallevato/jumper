@@ -6,6 +6,7 @@ import { getSocket } from '../net.js'
 import { toScreen } from '../iso.js'
 import { SOCKET_EVENTS as E, TILE_H, TILE_W } from '../../../shared/constants.js'
 import { COUNTERWEIGHT } from '../../../shared/puzzles.js'
+import { cosmeticIdForUnlock } from '../../../shared/cosmetics.js'
 import { getRoom } from '../maps.js'
 
 export class WorldScene extends Phaser.Scene {
@@ -90,7 +91,7 @@ export class WorldScene extends Phaser.Scene {
     socket.on(E.JOIN_OK, ({ players, worldItems, puzzle }) => {
       for (const p of players) {
         if (p.id === this.playerId) continue
-        this.remotePlayers.set(p.id, new RemotePlayer(this, p.id, p.x, p.y, p.z))
+        this.remotePlayers.set(p.id, new RemotePlayer(this, p.id, p.x, p.y, p.z, p.cosmeticId))
       }
       this._renderWorldItems(worldItems)
       // Snap the riser to whatever state the room is already in (no animation on join).
@@ -106,9 +107,9 @@ export class WorldScene extends Phaser.Scene {
         if (p.id === this.playerId) continue
         seen.add(p.id)
         if (this.remotePlayers.has(p.id)) {
-          this.remotePlayers.get(p.id).updateTarget(p.x, p.y, p.z)
+          this.remotePlayers.get(p.id).updateTarget(p.x, p.y, p.z, p.cosmeticId)
         } else {
-          this.remotePlayers.set(p.id, new RemotePlayer(this, p.id, p.x, p.y, p.z))
+          this.remotePlayers.set(p.id, new RemotePlayer(this, p.id, p.x, p.y, p.z, p.cosmeticId))
         }
       }
       for (const [id, rp] of this.remotePlayers) {
@@ -125,6 +126,11 @@ export class WorldScene extends Phaser.Scene {
       this._showDiscoveryFlash(secretId)
       if (this.profile) {
         this.profile.discoveredSecrets = [...(this.profile.discoveredSecrets ?? []), secretId]
+      }
+      // If this secret equips a cosmetic, recolor the local player to match.
+      if (effect?.type === 'cosmetic') {
+        const id = cosmeticIdForUnlock(secretId)
+        if (id) { this.player.setCosmetic(id); if (this.profile) this.profile.cosmetic_id = id }
       }
     })
 

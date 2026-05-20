@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { toScreen } from './iso.js'
+import { cosmeticById } from '../../shared/cosmetics.js'
 import {
   TILE_H, MOVE_SPEED, GRAVITY, ITEM_EFFECTS,
   MIN_JUMP_VEL, JUMP_HOLD_GRAV_FACTOR,
@@ -19,6 +20,7 @@ export class Player {
     this.profile   = profile
     this.heldItem  = profile?.heldItem ?? null
     this.facing    = 'se'
+    this.cosmeticId = profile?.cosmetic_id ?? 1
     this._platforms = platforms
 
     // Movement-feel state
@@ -51,16 +53,28 @@ export class Player {
   }
 
   _drawShape(g) {
+    const c = cosmeticById(this.cosmeticId)
     g.clear()
-    g.fillStyle(0x89b4fa, 1)
+    g.fillStyle(c.body, 1)
     g.fillCircle(0, -13, 10)
-    g.fillStyle(0xcdd6f4, 1)
+    g.fillStyle(c.head, 1)
     g.fillCircle(0, -27, 7)
+    if (c.accent != null) {
+      g.fillStyle(c.accent, 1)
+      g.fillCircle(0, -37, 2.5)
+    }
     g.fillStyle(0x1e1e2e, 1)
     g.fillCircle(-3, -27, 1.5)
     g.fillCircle(3, -27, 1.5)
     g.fillStyle(0xffffff, 0.45)
     g.fillCircle(-2, -31, 2)
+  }
+
+  // Recolor live when the player unlocks (and equips) a new cosmetic.
+  setCosmetic(id) {
+    if (id == null || id === this.cosmeticId) return
+    this.cosmeticId = id
+    this._drawShape(this.gfx)
   }
 
   get passiveEffect() {

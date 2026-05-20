@@ -1,4 +1,5 @@
 import { recomputeSkillLevel } from './profile.js'
+import { cosmeticIdForUnlock } from '../shared/cosmetics.js'
 
 // Each trigger: roomId, zone bounds (inclusive), action, optional itemName, secretId, effect
 const TRIGGERS = [
@@ -92,6 +93,12 @@ export function checkDiscovery(db, playerId, { action, roomId, wx, wy, wz, itemI
     db.prepare(
       'INSERT OR IGNORE INTO unlocked_areas (player_id, area_id) VALUES (?, ?)'
     ).run(playerId, trigger.effect.value)
+  }
+
+  // Equip the unlocked cosmetic so the player's appearance reflects what they've done.
+  if (trigger.effect.type === 'cosmetic') {
+    const cosmeticId = cosmeticIdForUnlock(trigger.secretId)
+    if (cosmeticId) db.prepare('UPDATE players SET cosmetic_id = ? WHERE id = ?').run(cosmeticId, playerId)
   }
 
   recomputeSkillLevel(db, playerId)

@@ -76,4 +76,12 @@ describe('secrets', () => {
     expect(result.secretId).toBe('secret_counterweight')
     expect(result.effect).toEqual({ type: 'cosmetic', value: 'counterweight' })
   })
+
+  it('equips the unlocked cosmetic on a cosmetic-effect discovery', () => {
+    checkDiscovery(db, playerId, {
+      action: 'reach_counterweight', roomId: 'overworld', wx: 8, wy: 11, wz: 2, itemId: null,
+    })
+    const player = db.prepare('SELECT cosmetic_id FROM players WHERE id = ?').get(playerId)
+    expect(player.cosmetic_id).toBe(8) // counterweight cosmetic
+  })
 })

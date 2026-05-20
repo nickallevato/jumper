@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3'
+import { COSMETICS } from '../shared/cosmetics.js'
 
 let _db = null
 
@@ -67,14 +68,8 @@ export function initDb(path = './jumper.db') {
   const cosmeticCount = db.prepare('SELECT COUNT(*) as n FROM cosmetics').get().n
   if (cosmeticCount === 0) {
     const insert = db.prepare('INSERT INTO cosmetics (name, unlock_condition) VALUES (?, ?)')
-    insert.run('default',      'none')
-    insert.run('sky_blue',     'dungeon_sky')
-    insert.run('deep_crimson', 'dungeon_deep')
-    insert.run('ghost_white',  'secret_wall_crack')
-    insert.run('wall_jumper',  'secret_wall_kick')
-    insert.run('spring_step',  'secret_head_bounce')
-    insert.run('pogo_master',  'secret_pogo')
-    insert.run('counterweight', 'secret_counterweight')
+    // Seed in catalog order so DB id matches the shared COSMETICS index (id = index + 1).
+    for (const c of COSMETICS) insert.run(c.name, c.unlock)
   }
 
   _db = db
