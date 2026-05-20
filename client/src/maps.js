@@ -4,7 +4,8 @@ import { doorsForRoom } from '../../shared/doors.js'
 // portals to other rooms, locked doors, and a camera background tint. WorldScene renders
 // whichever room it was started with. Tile types: 1=ground, 2=wall, 3=water (walkable, visual).
 
-const OVERWORLD_GRID = [
+// The original 16x16 overworld. The live overworld grows from this base — see below.
+const OVERWORLD_BASE = [
   [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
   [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
   [2,1,1,2,2,1,1,1,1,1,1,2,2,1,1,2],
@@ -22,6 +23,47 @@ const OVERWORLD_GRID = [
   [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
   [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
 ]
+
+// --- Overworld growth -------------------------------------------------------
+// The world grows one band (GROW_BAND wide) per loop iteration, alternating append
+// directions. Append-only keeps every existing tile coordinate valid — platforms,
+// portals, secret zones, and the puzzle all stay put. Each dimension caps at GROW_MAX.
+// To grow the world: append the next direction to OVERWORLD_GROWTH (alternate
+// 'east'/'south'). The grid is rebuilt from OVERWORLD_BASE through this log.
+const GROW_BAND = 16
+const GROW_MAX = 64
+
+function expandEast(grid) {
+  return grid.map((row, y) => {
+    const border = (y === 0 || y === grid.length - 1)
+    const inner = row.slice(0, -1)                                  // drop east wall
+    const band = Array.from({ length: GROW_BAND }, () => (border ? 2 : 1))
+    return [...inner, ...band, 2]                                   // re-add east wall
+  })
+}
+
+function expandSouth(grid) {
+  const W = grid[0].length
+  const top = grid.slice(0, -1)                                     // drop bottom wall
+  const band = Array.from({ length: GROW_BAND }, () =>
+    Array.from({ length: W }, (_, x) => (x === 0 || x === W - 1 ? 2 : 1)))
+  const bottom = Array.from({ length: W }, () => 2)
+  return [...top, ...band, bottom]
+}
+
+// Applied growth, oldest first. The loop appends the next direction each iteration.
+const OVERWORLD_GROWTH = ['east']
+
+function buildOverworld() {
+  let g = OVERWORLD_BASE
+  for (const dir of OVERWORLD_GROWTH) {
+    if (dir === 'east' && g[0].length < GROW_MAX) g = expandEast(g)
+    else if (dir === 'south' && g.length < GROW_MAX) g = expandSouth(g)
+  }
+  return g
+}
+
+const OVERWORLD_GRID = buildOverworld()
 
 const OVERWORLD_PLATFORMS = [
   { tx: 7, ty: 5, tz: 1 },
@@ -115,6 +157,7 @@ export const ROOMS = {
       { tx: 2, ty: 7, to: 'dungeon_library' },
     ],
     doors: doorsForRoom('overworld'),
+    follow: true,   // the overworld grows beyond one screen — camera follows the player
   },
   dungeon_grove: {
     grid: GROVE_GRID,

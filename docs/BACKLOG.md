@@ -9,6 +9,15 @@
 
 ---
 
+## World Growth (recurring — every loop)
+
+The loop grows the overworld one band per iteration, alternating append directions.
+To grow: append the next direction to `OVERWORLD_GROWTH` in `client/src/maps.js`.
+- Applied so far: **east**
+- **Next direction: south**
+- Rotation: east → south → east → south … (append-only; W/N deferred — would need a
+  coordinate-offset refactor since secret zones/puzzle coords are absolute). Cap 64/dim.
+
 ## Now (next iteration)
 
 ## Later
@@ -126,6 +135,10 @@ reveal now exist — this is unblocked.
   Lantern reveals the final shelves to the archive ledge → `secret_archivist`.
 - ✓ Camera punch on discovery — brief shake + soft green flash when a secret fires (pairs with
   the discovery sound).
+- ✓ Platform pillar rendering (player-reported) — raised tiles now draw full-height pillars to
+  the ground (depth = tz*TILE_H), so a player's elevation on a platform is legible.
+- ✓ Growing overworld — append-only growth system (`OVERWORLD_GROWTH`); first band east (16x32),
+  camera-follow enabled; loop grows one band/iteration alternating direction.
 
 ---
 
