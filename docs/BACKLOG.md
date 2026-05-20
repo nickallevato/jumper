@@ -125,6 +125,30 @@ itself becomes a hidden input language — pure discovery.
 Tiles/regions where jump gravity is reduced (discoverable by feel); stack with the Feather for
 huge floaty arcs. Enables otherwise-impossible routes; a world element that reshapes the core verb.
 
+### 46. Ice / slide tiles — *Pillars 1,2 · Size M*
+Tiles where the player keeps sliding (momentum carries past input release). Discoverable by feel;
+combine with a running jump for long glides, or chain across to reach otherwise-blocked spots. A
+world element that bends the core movement verb without a new button.
+
+### 47. Pressure-choir (N-player simultaneous plates) — *Pillars 1,4 · Size M*
+Several plates that must all be weighted at the SAME time to open something — needs a group, not
+a clever solo. Extends the Counterweight to true multi-player coordination; distinct from the
+single-player floor-sequence puzzle. No UI hint — players see plates reset when one steps off.
+
+### 48. Drifting fog (atmospheric concealment) — *Pillars 1,5 · Size M*
+Slow-drifting fog hides distant tiles, thinning near the player. Rewards exploration (you must go
+look), adds mood, and can conceal secrets/landmarks until approached — pairs with the large world.
+
+### 49. The Undercroft — descend-by-diving dungeon — *Pillars 1,2 · Size M*
+A vertical dungeon you go DOWN instead of up: dive (down-while-airborne) through gaps to drop to
+lower ledges; camera follows downward. Mirror of the Belltower, built on the dive verb; reaching
+the bottom records a secret.
+
+### 50. Resonance tiles (audio-sequence puzzle) — *Pillars 1 · Size M*
+Tiles each emit a distinct tone when stepped on; a nearby fixture plays a short sequence, and
+stepping the matching tiles in order opens a passage. Uses the new SFX system; pure listen-and-
+repeat discovery, no on-screen hint.
+
 ### 37. Minimap for the growing world — *Pillars 6 · Size M*
 A small camera-fixed overview of the overworld bounds + your position + portal locations.
 Navigation aid for the now-large map (layout isn't a discovery secret, so this is fair).
