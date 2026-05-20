@@ -45,4 +45,5 @@ export const SOCKET_EVENTS = {
   DOOR_OPEN:     'door:open',
   EMOTE:         'emote',
   ITEM_HELD:     'item:held',
+  WORLD_EVENT:   'world:event',
 }

@@ -34,10 +34,6 @@ jumps onto it. Enriches dungeons and the future Belltower.
 ### 18. Idle bob animation — *Pillars 5 · Size S*
 Players gently bob/breathe when standing still. Cheap liveliness; reads as "alive" not frozen.
 
-### 19. World-event bell broadcast — *Pillars 1,4 · Size S*
-Ringing the Belltower bell flashes a banner to everyone in all rooms ("a bell tolls in the
-distance"). The cross-room social payoff from the original Belltower design.
-
 ### 20. Fall-out recovery — *Pillars 6 · Size S*
 If a player drops below the floor (off a tall ledge in a follow-room), respawn at room spawn
 instead of falling forever. Safety net for vertical levels.
@@ -48,6 +44,12 @@ A brief zoom-punch + shake when a discovery fires; juice that makes finds feel m
 ### 22. Belltower checkpoints — *Pillars 6 · Size S*
 Respawn at the highest ledge reached so a missed jump doesn't drop you to the very bottom.
 Reduces frustration on vertical climbs.
+
+### 23. Ambient floating motes — *Pillars 5 · Size S*
+Slow drifting particles in dungeon rooms for atmosphere; cheap mood without gameplay impact.
+
+### 24. Distance-faded remote players — *Pillars 5 · Size S*
+Remote players far from you render slightly transparent as a depth/focus cue.
 
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
@@ -95,6 +97,8 @@ reveal now exist — this is unblocked.
   maps input intent to tile space (player-requested feel fix).
 - ✓ Camera-follow (per-room opt-in, content-clamped) + The Belltower — tall spiral-ledge shaft
   reached via overworld portal (13,2); reach the bell at the top for `secret_bell`.
+- ✓ World-event bell broadcast — ringing the bell `io.emit`s a world event; everyone in every
+  room sees a "a bell tolls in the distance" banner.
 
 ---
 

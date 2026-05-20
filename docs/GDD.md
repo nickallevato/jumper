@@ -57,7 +57,8 @@ recomputed on discovery. Gates area access; not shown to the player.
 shortcuts possible, normal-jump climb intended), a bell at the top records `secret_bell`. Reached
 via the overworld portal at (13,2). It sets `follow: true`, so the camera follows the player and
 is clamped to the room's content bounds — **per-room camera-follow** (default off) keeps small
-rooms statically framed as before.
+rooms statically framed as before. Ringing the bell is a **world event**: the server `io.emit`s
+`world:event` to everyone in every room, who see a "a bell tolls in the distance" banner.
 
 The overworld has elevated platforms players can jump onto, and three secret trigger zones.
 

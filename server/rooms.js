@@ -134,6 +134,8 @@ export function attachRooms(io, db) {
       const state = players.get(playerId)
       const result = checkDiscovery(db, playerId, { action, roomId: state.roomId, wx, wy, wz, itemId })
       if (result) socket.emit(S.DISCOVER_OK, result)
+      // Ringing the bell is a world event — everyone, in every room, hears it toll.
+      if (action === 'ring_bell') io.emit(S.WORLD_EVENT, { type: 'bell' })
     })
 
     socket.on('disconnect', () => {

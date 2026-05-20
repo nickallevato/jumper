@@ -188,6 +188,10 @@ export class WorldScene extends Phaser.Scene {
       this.remotePlayers.get(id)?.showEmote(type)
     })
 
+    socket.on(E.WORLD_EVENT, ({ type }) => {
+      if (type === 'bell') this._showWorldBanner('🔔 a bell tolls in the distance')
+    })
+
     // Authoritative held-item state: keeps the indicator + pickup gate in sync with the server.
     socket.on(E.ITEM_HELD, ({ item }) => {
       this._heldItem = item
@@ -494,6 +498,21 @@ export class WorldScene extends Phaser.Scene {
     })
   }
 
+  // Camera-fixed banner near the top for world events (e.g. a bell tolling).
+  _showWorldBanner(text) {
+    const t = this.add.text(this.scale.width / 2, 64, text, {
+      color: '#f9e2af', fontSize: '20px', fontStyle: 'bold',
+    }).setOrigin(0.5).setAlpha(0).setScrollFactor(0).setDepth(1000)
+    this.tweens.add({
+      targets: t,
+      alpha: { from: 0, to: 1 },
+      duration: 400,
+      yoyo: true,
+      hold: 2200,
+      onComplete: () => t.destroy(),
+    })
+  }
+
   _showDiscoveryFlash(secretId) {
     const text = this.add.text(
       this.scale.width / 2,
@@ -523,5 +542,6 @@ export class WorldScene extends Phaser.Scene {
     socket.off(E.DOOR_OPEN)
     socket.off(E.EMOTE)
     socket.off(E.ITEM_HELD)
+    socket.off(E.WORLD_EVENT)
   }
 }
