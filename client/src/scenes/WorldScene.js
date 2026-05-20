@@ -369,16 +369,24 @@ export class WorldScene extends Phaser.Scene {
     this.player.setPlatforms(reveal ? [...this._basePlatforms, ...this._hidden] : this._basePlatforms)
   }
 
-  // Glowing portal markers — step onto one to travel to another room.
+  // Glowing portal markers — step onto one to travel to another room. Each destination
+  // gets a distinct color so the entrances are tellable apart at a glance in the big world.
   _drawPortals(originX, originY) {
+    const COLORS = {
+      dungeon_grove:     { fill: 0xa6e3a1, line: 0xcfeecc },  // green
+      dungeon_belltower: { fill: 0xf9e2af, line: 0xffe08a },  // gold
+      dungeon_library:   { fill: 0xcba6f7, line: 0xf5c2e7 },  // violet
+      overworld:         { fill: 0x89dceb, line: 0xbfeaf2 },  // sky (return)
+    }
     const hw = TILE_W / 2, hh = TILE_H / 2
     const diamond = [{ x: 0, y: -hh }, { x: hw, y: 0 }, { x: 0, y: hh }, { x: -hw, y: 0 }]
     for (const portal of this.portals) {
+      const c = COLORS[portal.to] ?? COLORS.overworld
       const { x, y } = toScreen(portal.tx, portal.ty, 0, originX, originY)
       const g = this.add.graphics()
-      g.fillStyle(0xcba6f7, 0.9)
+      g.fillStyle(c.fill, 0.9)
       g.fillPoints(diamond, true)
-      g.lineStyle(2, 0xf5c2e7, 1)
+      g.lineStyle(2, c.line, 1)
       g.strokePoints(diamond, true)
       g.setPosition(x, y)
       this.tweens.add({ targets: g, alpha: { from: 0.4, to: 1 }, duration: 700, yoyo: true, repeat: -1 })
