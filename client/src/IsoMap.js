@@ -46,14 +46,17 @@ export class IsoMap {
       const style = STYLES[tile.type]
       if (!style) continue
       const { x, y } = toScreen(tile.tx, tile.ty, tile.tz, this.originX, this.originY)
-      this._drawTile(g, x, y, style)
+      // Raised tiles render as full-height pillars to the ground so their elevation
+      // is legible (and a player standing on top clearly reads as "up high").
+      const depth = tile.tz > 0 ? tile.tz * TILE_H + style.depth : style.depth
+      this._drawTile(g, x, y, style, depth)
     }
   }
 
-  _drawTile(g, sx, sy, style) {
+  _drawTile(g, sx, sy, style, depth) {
     const hw = TILE_W / 2
     const hh = TILE_H / 2
-    const D  = style.depth
+    const D  = depth ?? style.depth
 
     g.fillStyle(style.left, 1)
     g.fillPoints([

@@ -65,7 +65,15 @@ rooms statically framed as before. Ringing the bell is a **world event**: the se
 the climb to an archive ledge that records `secret_archivist` (move there holding the Lantern).
 
 Platform landing uses a tile-centered footprint (`round(tx)`), matching the diamond's drawn
-position, so feet land where the platform visually is.
+position, so feet land where the platform visually is. Raised tiles/platforms render as
+full-height pillars to the ground (side depth = `tz*TILE_H`), so elevation is legible and a
+player on top clearly reads as up high.
+
+**Growing overworld:** the overworld grows one band (`GROW_BAND=16` wide) per loop iteration,
+alternating append directions (east, south, …), capped at `GROW_MAX=64`/dim. Append-only keeps
+every existing coordinate valid. Growth is recorded in `OVERWORLD_GROWTH` (client/src/maps.js) and
+the grid is rebuilt from `OVERWORLD_BASE`. The overworld now uses camera-follow (it exceeds one
+screen). See the World Growth tracker in BACKLOG.md for the next direction.
 
 The overworld has elevated platforms players can jump onto, and three secret trigger zones.
 
