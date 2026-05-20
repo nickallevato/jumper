@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { toScreen, screenToTileDir } from './iso.js'
 import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
+import { Sound } from './sound.js'
 import {
   MOVE_SPEED, GRAVITY, ITEM_EFFECTS,
   MIN_JUMP_VEL, JUMP_HOLD_GRAV_FACTOR,
@@ -158,9 +159,11 @@ export class Player {
           this.vz = jv * POGO_FACTOR
           this._squash(0.8, 1.4, 90)
           this.onDiscoverAttempt?.(this._action('pogo'))
+          Sound.pogo()
         } else {
           this.vz = jv
           this._squash(0.85, 1.3, 80)
+          Sound.jump()
         }
         this.onGround = false
         this._isCoyoteJump = false
@@ -175,6 +178,7 @@ export class Player {
         this._isCoyoteJump = false
         this._squash(1.3, 0.85, 100)
         this.onDiscoverAttempt?.(this._action('wall_kick'))
+        Sound.kick()
       } else if (this._coyoteTimer > 0) {
         // Coyote jump — fixed small arc, no hold bonus
         this.vz = COYOTE_VEL
@@ -182,6 +186,7 @@ export class Player {
         this._coyoteTimer = 0
         this._isCoyoteJump = true
         this._squash(0.85, 1.3, 80)
+        Sound.jump()
       }
       this._lastJumpTap = now
     }
@@ -263,6 +268,7 @@ export class Player {
     this._coyoteTimer = 0
     this._landedAt = now
     this._squash(1.4, 0.65, 70)
+    Sound.land()
   }
 
   // Authoritative held-item update from the server (drives the indicator + passive effects).
@@ -287,6 +293,7 @@ export class Player {
     this.onGround = false
     this._isCoyoteJump = false
     this._squash(0.85, 1.3, 90)
+    Sound.bounce()
   }
 
   // Anchor convention: an entity's visual base sits exactly on the top-face

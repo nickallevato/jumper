@@ -119,6 +119,10 @@ Discoveries are private. Head-bounce pair detection runs in the server tick loop
 **Emotes:** press `F` to wave — shown locally and relayed (`emote`) to others in the same room
 as a brief bubble above the head. Lets strangers communicate without chat (chat is out of scope).
 
+**Sound:** synthesized WebAudio blips (`client/src/sound.js`, no asset files) for jump, land,
+wall-kick, pogo, head-bounce, pickup, discovery, and the bell. AudioContext is created lazily on
+first input; `M` toggles mute (persisted in localStorage).
+
 ### Lantern reveal (implemented — Grove)
 
 Hidden platforms (`room.hidden` in `maps.js`) are invisible and non-collidable until the local

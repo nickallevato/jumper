@@ -17,9 +17,6 @@ reveal + camera-follow now exist — fully unblocked.
 
 ## Later
 
-### 12. Synthesized sound effects — *Pillars 5 · Size M*
-WebAudio-generated blips for jump / land / discover / pickup — no asset files. Adds feel/juice.
-
 ### 14. Landing dust puff — *Pillars 5 · Size S*
 A small particle/graphic burst when the player lands, scaled by fall speed. Pure juice.
 
@@ -57,6 +54,12 @@ A soft looping pad/drone per room for mood (distinct tone per area). WebAudio, n
 ### 26. Controls help overlay — *Pillars 6 · Size S*
 A toggleable panel showing basic movement controls only (WASD/jump/emote/use) — never discovery
 hints, so it stays true to "discovery is the game".
+
+### 27. Stereo panning by position — *Pillars 5 · Size S*
+Pan sound effects left/right by the source's screen-x for spatial feel (builds on the SFX system).
+
+### 28. Mute persistence + volume — *Pillars 6 · Size S*
+Remember mute state (and later volume) in localStorage so the choice survives reloads.
 
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
@@ -109,6 +112,8 @@ reveal now exist — this is unblocked.
 - ✓ Iso alignment quality pass (player-reported) — feet/shadow/tile-platform tops were misaligned
   (`-TILE_H/2` float + shadow pinned to ground). Established one anchor convention; shadow now
   tracks the standing surface with a height fade. Player/Remote/items/bell all consistent.
+- ✓ Synthesized sound effects — WebAudio blips for jump/land/kick/pogo/bounce/pickup/discover/
+  bell; lazy AudioContext, M toggles mute (persisted in localStorage).
 
 ---
 

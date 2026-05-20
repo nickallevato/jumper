@@ -8,6 +8,7 @@ import { SOCKET_EVENTS as E, TILE_H, TILE_W } from '../../../shared/constants.js
 import { COUNTERWEIGHT } from '../../../shared/puzzles.js'
 import { cosmeticIdForUnlock } from '../../../shared/cosmetics.js'
 import { getRoom } from '../maps.js'
+import { Sound } from '../sound.js'
 
 export class WorldScene extends Phaser.Scene {
   constructor() {
@@ -160,6 +161,7 @@ export class WorldScene extends Phaser.Scene {
     socket.on(E.DISCOVER_OK, ({ secretId, effect }) => {
       console.log('Discovery:', secretId, effect)
       this._showDiscoveryFlash(secretId)
+      Sound.discover()
       if (this.profile) {
         const already = (this.profile.discoveredSecrets ?? []).includes(secretId)
         if (!already) {
@@ -189,7 +191,7 @@ export class WorldScene extends Phaser.Scene {
     })
 
     socket.on(E.WORLD_EVENT, ({ type }) => {
-      if (type === 'bell') this._showWorldBanner('🔔 a bell tolls in the distance')
+      if (type === 'bell') { this._showWorldBanner('🔔 a bell tolls in the distance'); Sound.bell() }
     })
 
     // Authoritative held-item state: keeps the indicator + pickup gate in sync with the server.
@@ -234,6 +236,12 @@ export class WorldScene extends Phaser.Scene {
       )
       if (!near) return
       this._socket.emit(E.ITEM_USE, { triggerId: 'unlock_door', x: this.player.tx, y: this.player.ty })
+    })
+
+    // M = toggle sound (persisted).
+    this.input.keyboard.on('keydown-M', () => {
+      const muted = Sound.toggleMute()
+      this._showWorldBanner(muted ? 'sound off' : 'sound on')
     })
   }
 
@@ -461,6 +469,7 @@ export class WorldScene extends Phaser.Scene {
           this._socket.emit(E.ITEM_PICKUP, { worldItemId })
           this._heldItem = { pending: true }   // optimistic: treat as holding until ITEM_STATE
           this._pickupCooldown = 500
+          Sound.pickup()
           break
         }
       }
