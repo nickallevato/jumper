@@ -67,6 +67,11 @@ export class WorldScene extends Phaser.Scene {
     this._portalLock = true
     this.time.delayedCall(500, () => { this._portalLock = false })
 
+    // Discovery counter HUD — count only (no totals/names), fixed to the camera.
+    this._hud = this.add.text(16, 12, this._discoveryLabel(), {
+      color: '#a6e3a1', fontSize: '18px', fontStyle: 'bold',
+    }).setScrollFactor(0).setDepth(1000)
+
     this.cursors = this.input.keyboard.createCursorKeys()
     this.keys = this.input.keyboard.addKeys({
       w: Phaser.Input.Keyboard.KeyCodes.W,
@@ -131,7 +136,11 @@ export class WorldScene extends Phaser.Scene {
       console.log('Discovery:', secretId, effect)
       this._showDiscoveryFlash(secretId)
       if (this.profile) {
-        this.profile.discoveredSecrets = [...(this.profile.discoveredSecrets ?? []), secretId]
+        const already = (this.profile.discoveredSecrets ?? []).includes(secretId)
+        if (!already) {
+          this.profile.discoveredSecrets = [...(this.profile.discoveredSecrets ?? []), secretId]
+          this._bumpHud()
+        }
       }
       // If this secret equips a cosmetic, recolor the local player to match.
       if (effect?.type === 'cosmetic') {
@@ -354,6 +363,22 @@ export class WorldScene extends Phaser.Scene {
 
     // Interpolate remote players
     for (const rp of this.remotePlayers.values()) rp.update()
+  }
+
+  _discoveryLabel() {
+    return `✦ ${(this.profile?.discoveredSecrets ?? []).length}`
+  }
+
+  // Update the counter and pop it briefly to acknowledge a new find.
+  _bumpHud() {
+    if (!this._hud) return
+    this._hud.setText(this._discoveryLabel())
+    this.tweens.add({
+      targets: this._hud,
+      scale: { from: 1.6, to: 1 },
+      duration: 320,
+      ease: 'Back.easeOut',
+    })
   }
 
   _showDiscoveryFlash(secretId) {

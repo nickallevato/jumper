@@ -17,6 +17,11 @@ First to ring the bell triggers a world event in the overworld. Depends on #1.
 
 ## Later
 
+### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
+Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
+original design ("unlocked by diving into a specific cracked floor tile"). Combines the dive verb
+with room transitions; a discoverable, unhinted entrance distinct from walk-on portals.
+
 ### 5. Floor-sequence puzzle (small room) — *Pillars 1,2 · Size M*
 Hidden-order pressure plates; wrong order resets, right order opens a door. No UI hint.
 
@@ -46,6 +51,8 @@ Hidden tiles that only render when a player holding the Lantern is nearby. Enabl
   equip `cosmetic_id`; local + remote players render palette + accent; live recolor on discovery.
 - ✓ Items become meaningful — seeded starter world items; Key + locked door (Grove vault), E to
   use, server-authoritative door state, `secret_locksmith` cosmetic, Lantern reward inside.
+- ✓ Discovery counter HUD — camera-fixed `✦ N` of secrets found (unhinted: no totals/names),
+  pops on each new discovery, persists across rooms via the profile.
 
 ---
 
