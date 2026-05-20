@@ -1,4 +1,9 @@
 .superpowers/
+.claude/
 node_modules/
 dist/
 *.log
+*.db
+*.db-shm
+*.db-wal
+.vite/
