@@ -137,8 +137,11 @@ export class Player {
     const cols = grid[0].length
     const rows = grid.length
 
-    if (nx >= 0 && nx < cols && grid[Math.floor(this.ty)]?.[Math.floor(nx)] !== 2) this.tx = nx
-    if (ny >= 0 && ny < rows && grid[Math.floor(ny)]?.[Math.floor(this.tx)] !== 2) this.ty = ny
+    // Wall collision uses the nearest tile (round, not floor) so a wall blocks at its
+    // drawn edge — tiles render centered on their coordinate, so floor let players walk
+    // a half-tile into the visible wall before stopping.
+    if (nx >= 0 && nx < cols && grid[Math.round(this.ty)]?.[Math.round(nx)] !== 2) this.tx = nx
+    if (ny >= 0 && ny < rows && grid[Math.round(ny)]?.[Math.round(this.tx)] !== 2) this.ty = ny
 
     // Decay timers
     this._coyoteTimer = Math.max(0, this._coyoteTimer - ms)

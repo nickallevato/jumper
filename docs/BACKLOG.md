@@ -139,6 +139,8 @@ reveal now exist — this is unblocked.
   the ground (depth = tz*TILE_H), so a player's elevation on a platform is legible.
 - ✓ Growing overworld — append-only growth system (`OVERWORLD_GROWTH`); first band east (16x32),
   camera-follow enabled; loop grows one band/iteration alternating direction.
+- ✓ Wall clipping fix (player-reported) — wall collision used `floor`, letting players walk a
+  half-tile into the visible wall; switched to `round` so walls block at their drawn edge.
 
 ---
 
