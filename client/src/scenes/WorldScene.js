@@ -26,9 +26,12 @@ export class WorldScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this)
 
     const room = getRoom(this.roomId)
-    this.grid = room.grid
+    // Deep-copy the grid so opening doors (mutating tiles) never corrupts the shared registry.
+    this.grid = room.grid.map(r => [...r])
     this.platforms = room.platforms
     this.portals = room.portals ?? []
+    this.doors = room.doors ?? []
+    this._openDoors = new Set()
     this.cameras.main.setBackgroundColor(room.bg ?? '#1a1a2e')
     this.cameras.main.fadeIn(180, 0, 0, 0)
     this._transitioning = false
@@ -50,6 +53,8 @@ export class WorldScene extends Phaser.Scene {
 
     this.isoMap = new IsoMap(this, this.grid, originX, originY, staticPlatforms)
     this._drawPortals(originX, originY)
+    this._doorGfx = new Map()
+    this._drawDoors(originX, originY)
     if (this.riser) {
       this._drawPlate(originX, originY)
       this._riserGfx = this.add.graphics()
@@ -88,12 +93,13 @@ export class WorldScene extends Phaser.Scene {
 
     socket.emit(E.JOIN_ROOM, { roomId: this.roomId })
 
-    socket.on(E.JOIN_OK, ({ players, worldItems, puzzle }) => {
+    socket.on(E.JOIN_OK, ({ players, worldItems, puzzle, openDoors }) => {
       for (const p of players) {
         if (p.id === this.playerId) continue
         this.remotePlayers.set(p.id, new RemotePlayer(this, p.id, p.x, p.y, p.z, p.cosmeticId))
       }
       this._renderWorldItems(worldItems)
+      for (const d of openDoors ?? []) this._openDoor(d.tx, d.ty)
       // Snap the riser to whatever state the room is already in (no animation on join).
       if (this.riser) {
         this.riser.tz = puzzle?.raised ? COUNTERWEIGHT.riser.raisedZ : COUNTERWEIGHT.riser.loweredZ
@@ -138,6 +144,11 @@ export class WorldScene extends Phaser.Scene {
       this.player.applyBounce(vel)
     })
 
+    socket.on(E.DOOR_OPEN, ({ tx, ty }) => {
+      this._openDoor(tx, ty)
+      this._heldItem = null   // a Key we used is consumed
+    })
+
     socket.on(E.PUZZLE_STATE, ({ raised }) => {
       if (!this.riser) return
       const { loweredZ, raisedZ } = COUNTERWEIGHT.riser
@@ -157,6 +168,45 @@ export class WorldScene extends Phaser.Scene {
       this._socket.emit(E.ITEM_DROP, { x: state.x, y: state.y, z: state.z })
       this._heldItem = null
     })
+
+    // E = use held item on a nearby door (server validates it's a Key).
+    this.input.keyboard.on('keydown-E', () => {
+      const near = this.doors.find(d =>
+        !this._openDoors.has(`${d.tx},${d.ty}`) &&
+        Math.hypot(this.player.tx - d.tx, this.player.ty - d.ty) < 1.3
+      )
+      if (!near) return
+      this._socket.emit(E.ITEM_USE, { triggerId: 'unlock_door', x: this.player.tx, y: this.player.ty })
+    })
+  }
+
+  // Door markers: a distinct banded diamond on the closed door tile so it reads as a door.
+  _drawDoors(originX, originY) {
+    const hw = TILE_W / 2, hh = TILE_H / 2
+    const diamond = [{ x: 0, y: -hh }, { x: hw, y: 0 }, { x: 0, y: hh }, { x: -hw, y: 0 }]
+    for (const d of this.doors) {
+      const { x, y } = toScreen(d.tx, d.ty, 0, originX, originY)
+      const g = this.add.graphics()
+      g.fillStyle(0x9a6b3f, 1)
+      g.fillPoints(diamond, true)
+      g.lineStyle(2, 0xd9a066, 1)
+      g.strokePoints(diamond, true)
+      g.fillStyle(0x2b1d10, 1)
+      g.fillCircle(0, -4, 3)   // keyhole
+      g.setPosition(x, y - 6)
+      this._doorGfx.set(`${d.tx},${d.ty}`, g)
+    }
+  }
+
+  // Open a door tile: make it passable, redraw the map, drop its marker.
+  _openDoor(tx, ty) {
+    const key = `${tx},${ty}`
+    if (this._openDoors.has(key)) return
+    this._openDoors.add(key)
+    if (this.grid[ty]?.[tx] !== undefined) this.grid[ty][tx] = 1
+    this.isoMap.draw()
+    const g = this._doorGfx.get(key)
+    if (g) { g.destroy(); this._doorGfx.delete(key) }
   }
 
   // Bright sunken plate — visually invites stepping/dropping; pulses to read as interactive.
@@ -332,5 +382,6 @@ export class WorldScene extends Phaser.Scene {
     socket.off(E.DISCOVER_OK)
     socket.off(E.BOUNCE_HEAD)
     socket.off(E.PUZZLE_STATE)
+    socket.off(E.DOOR_OPEN)
   }
 }

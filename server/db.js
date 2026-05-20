@@ -72,6 +72,17 @@ export function initDb(path = './jumper.db') {
     for (const c of COSMETICS) insert.run(c.name, c.unlock)
   }
 
+  // Seed starter world items so the world has things to find without manual SQL.
+  const worldItemCount = db.prepare('SELECT COUNT(*) as n FROM world_items').get().n
+  if (worldItemCount === 0) {
+    const idOf = name => db.prepare('SELECT id FROM items WHERE name = ?').get(name).id
+    const place = db.prepare('INSERT INTO world_items (item_id, room_id, wx, wy, wz) VALUES (?, ?, ?, ?, ?)')
+    place.run(idOf('Feather'), 'overworld',     6,  7, 0)
+    place.run(idOf('Spring'),  'overworld',     10, 8, 0)
+    place.run(idOf('Key'),     'dungeon_grove', 4,  9, 0)   // find it, open the vault
+    place.run(idOf('Lantern'), 'dungeon_grove', 9,  1, 0)   // reward sealed inside the vault
+  }
+
   _db = db
   return db
 }

@@ -73,10 +73,14 @@ Tunables in `shared/constants.js`. Dive/fast-fall exists as a discovery action o
 ## 7. Items (implemented)
 
 One item per player, enforced server-side. Three behaviors: **passive** (movement modifier
-while held — Feather/floaty, Spring/high-jump, Lantern/reveal), **droppable** (drop into world,
-others pick up if empty-handed; auto-pickup within 0.8 tiles), **world-interactive** (use against
-a trigger — Key/unlock_door; effect logic stubbed). Held-item indicator dot shown above the head.
-World items bob.
+while held — Feather/floaty, Spring/high-jump, Lantern/reveal), **droppable** (drop into world
+with Q, others pick up if empty-handed; auto-pickup within 0.8 tiles), **world-interactive**
+(press E next to a locked door holding a Key → server opens it for the room, consumes the Key,
+records `secret_locksmith`). Held-item indicator dot shown above the head. World items bob.
+
+Starter items are seeded into the world on DB init: Feather (overworld 6,7), Spring (overworld
+10,8), Key (Grove 4,9), and a Lantern reward sealed in the Grove vault (9,1). Locked doors live
+in `shared/doors.js`; opened-door state is per-room and sent to late joiners in `join:ok`.
 
 ## 8. Discovery & Secrets (implemented — `server/secrets.js`)
 

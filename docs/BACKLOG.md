@@ -15,10 +15,6 @@
 Tall vertical wall-kick shaft, ~4 tiles wide, spiraling ledges. Showcases the new wall-kick tech.
 First to ring the bell triggers a world event in the overworld. Depends on #1.
 
-### 4. Item world-interaction effects — *Pillars 1 · Size M · Gap ✓*
-Make `useItem` fire a real world change (Key opens a door object → reveals passage). Currently
-validated server-side but inert.
-
 ## Later
 
 ### 5. Floor-sequence puzzle (small room) — *Pillars 1,2 · Size M*
@@ -48,6 +44,8 @@ Hidden tiles that only render when a player holding the Lantern is nearby. Enabl
   `dungeon_grove` starter dungeon; puzzle scoped to overworld.
 - ✓ Cosmetic rendering — shared cosmetics catalog (DB seed + render source of truth); secrets
   equip `cosmetic_id`; local + remote players render palette + accent; live recolor on discovery.
+- ✓ Items become meaningful — seeded starter world items; Key + locked door (Grove vault), E to
+  use, server-authoritative door state, `secret_locksmith` cosmetic, Lantern reward inside.
 
 ---
 

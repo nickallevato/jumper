@@ -11,6 +11,8 @@ describe('items', () => {
     playerId = getOrCreateProfile(db, 'tok-items').id
     featherId = db.prepare("SELECT id FROM items WHERE name = 'Feather'").get().id
 
+    // Start from an empty world so this suite controls its own fixtures (initDb seeds items).
+    db.prepare('DELETE FROM world_items').run()
     db.prepare('INSERT INTO world_items (item_id, room_id, wx, wy, wz) VALUES (?, ?, ?, ?, ?)').run(featherId, 'overworld', 5, 5, 0)
   })
 

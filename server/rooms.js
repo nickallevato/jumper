@@ -4,6 +4,7 @@ import { getWorldItems, pickupItem, dropItem, useItem } from './items.js'
 import { checkDiscovery } from './secrets.js'
 import { TICK_MS, ROOM_CAP_SMALL, BOUNCE_VEL, SOCKET_EVENTS as E } from '../shared/constants.js'
 import { COUNTERWEIGHT, isOnPlate, isAtGoal, PLATE_RADIUS } from '../shared/puzzles.js'
+import { findDoorNear } from '../shared/doors.js'
 
 const S = E
 
@@ -12,6 +13,8 @@ export function attachRooms(io, db) {
   const players = new Map()
   // roomId → whether that room's counterweight plate is currently weighted
   const puzzleRaised = new Map()
+  // roomId → Set of "tx,ty" door tiles that have been opened
+  const openDoors = new Map()
 
   io.on('connection', socket => {
     let playerId = null
@@ -47,10 +50,15 @@ export function attachRooms(io, db) {
         .filter(([, p]) => p.roomId === roomId)
         .map(([id, p]) => ({ id, x: p.x, y: p.y, z: p.z, cosmeticId: p.cosmeticId }))
 
+      const doors = [...(openDoors.get(roomId) ?? [])].map(k => {
+        const [tx, ty] = k.split(',').map(Number)
+        return { tx, ty }
+      })
       socket.emit(S.JOIN_OK, {
         players: roomPlayers,
         worldItems: getWorldItems(db, roomId),
         puzzle: { raised: !!puzzleRaised.get(roomId) },
+        openDoors: doors,
       })
     })
 
@@ -76,9 +84,30 @@ export function attachRooms(io, db) {
       io.to(state.roomId).emit(S.ITEM_STATE, { worldItems: getWorldItems(db, state.roomId) })
     })
 
-    socket.on(S.ITEM_USE, ({ triggerId }) => {
+    socket.on(S.ITEM_USE, ({ triggerId, x, y }) => {
       if (!playerId) return
-      useItem(db, playerId, triggerId)
+      const state = players.get(playerId)
+      const result = useItem(db, playerId, triggerId)
+      if (!result.ok) return
+
+      if (triggerId === 'unlock_door') {
+        const door = findDoorNear(state.roomId, x, y)
+        if (!door) return
+        const key = `${door.tx},${door.ty}`
+        if (!openDoors.has(state.roomId)) openDoors.set(state.roomId, new Set())
+        if (openDoors.get(state.roomId).has(key)) return   // already open
+        openDoors.get(state.roomId).add(key)
+
+        // Consume the Key and tell everyone in the room the door opened.
+        db.prepare('UPDATE players SET held_item_id = NULL WHERE id = ?').run(playerId)
+        io.to(state.roomId).emit(S.DOOR_OPEN, { tx: door.tx, ty: door.ty })
+
+        const disc = checkDiscovery(db, playerId, {
+          action: 'unlock_door', roomId: state.roomId,
+          wx: door.tx, wy: door.ty, wz: 0, itemId: null,
+        })
+        if (disc) socket.emit(S.DISCOVER_OK, disc)
+      }
     })
 
     socket.on(S.DISCOVER, ({ action, wx, wy, wz, itemId }) => {

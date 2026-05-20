@@ -57,6 +57,13 @@ const TRIGGERS = [
     itemName: null,
     effect:   { type: 'cosmetic', value: 'counterweight' },
   },
+  {
+    secretId: 'secret_locksmith',
+    roomId:   'dungeon_grove',
+    action:   'unlock_door',
+    itemName: null,
+    effect:   { type: 'cosmetic', value: 'locksmith' },
+  },
 ]
 
 function matchesTrigger(trigger, { action, roomId, wx, wy, itemName }) {
