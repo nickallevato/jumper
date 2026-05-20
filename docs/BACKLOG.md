@@ -13,8 +13,8 @@
 
 The loop grows the overworld one band per iteration, alternating append directions.
 To grow: append the next direction to `OVERWORLD_GROWTH` in `client/src/maps.js`.
-- Applied so far: **east, south**
-- **Next direction: east**
+- Applied so far: **east, south, east**
+- **Next direction: south**
 - Rotation: east → south → east → south … (append-only; W/N deferred — would need a
   coordinate-offset refactor since secret zones/puzzle coords are absolute). Cap 64/dim.
 
@@ -78,6 +78,10 @@ A small deadzone on the follow camera so tiny movements don't jitter the view.
 
 ### 34. Remote player idle bob — *Pillars 5 · Size S*
 Extend idle breathing/bob to remote players (detect a stationary interpolation target).
+
+### 36. Landmark beacons in grown areas — *Pillars 1,5 · Size M*
+Occasional tall markers/structures seeded into the expanding bands so the open world has
+something to navigate toward (grown areas are currently featureless).
 
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
@@ -149,6 +153,9 @@ reveal now exist — this is unblocked.
   (top one tile up, body to the ground), consistent with platform pillars.
 - ✓ Idle bob — local player gently breathes (subtle vertical bob) when standing still on ground.
 - ✓ World growth: south band → overworld now 32x32.
+- ✓ Ground texture variation — deterministic per-tile top-color jitter on ground/water so the
+  growing grassland reads as textured, not a flat uniform plane.
+- ✓ World growth: east band → overworld now 32x48.
 
 ---
 

@@ -10,6 +10,21 @@ const STYLES = {
 
 const WALL_HEIGHT = 1   // walls render one tile tall (rising above the floor)
 
+// Deterministic per-tile shade in [-amt, amt] so flat ground/water gets subtle texture
+// instead of reading as one uniform plane. Stable across redraws (hashes tile coords).
+function tileShade(tx, ty, amt = 0.07) {
+  let h = ((tx * 73856093) ^ (ty * 19349663)) >>> 0
+  return ((h % 1000) / 1000 - 0.5) * 2 * amt
+}
+
+function shade(color, f) {
+  const cl = v => Math.max(0, Math.min(255, Math.round(v)))
+  const r = cl(((color >> 16) & 255) * (1 + f))
+  const g = cl(((color >> 8) & 255) * (1 + f))
+  const b = cl((color & 255) * (1 + f))
+  return (r << 16) | (g << 8) | b
+}
+
 export class IsoMap {
   constructor(scene, grid, originX, originY, platforms = []) {
     this.scene = scene
@@ -56,11 +71,15 @@ export class IsoMap {
       // Raised tiles (walls, platforms) draw their sides down to the ground so they read
       // as solid blocks/pillars; flat tiles keep their thin lip.
       const depth = tile.tz > 0 ? tile.tz * TILE_H + 10 : style.depth
-      this._drawTile(g, x, y, style, depth)
+      // Flat ground/water gets a subtle deterministic top-color jitter for texture.
+      const topColor = (tile.type === 1 || tile.type === 3)
+        ? shade(style.top, tileShade(tile.tx, tile.ty))
+        : style.top
+      this._drawTile(g, x, y, style, depth, topColor)
     }
   }
 
-  _drawTile(g, sx, sy, style, depth) {
+  _drawTile(g, sx, sy, style, depth, topColor) {
     const hw = TILE_W / 2
     const hh = TILE_H / 2
     const D  = depth ?? style.depth
@@ -81,7 +100,7 @@ export class IsoMap {
       { x: sx,      y: sy + hh + D },
     ], true)
 
-    g.fillStyle(style.top, 1)
+    g.fillStyle(topColor ?? style.top, 1)
     g.fillPoints([
       { x: sx,      y: sy - hh },
       { x: sx + hw, y: sy },
