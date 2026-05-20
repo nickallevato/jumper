@@ -100,6 +100,16 @@ describe('secrets', () => {
     })).toBeNull()
   })
 
+  it('records secret_archivist only in the library at the shelf holding a Lantern', () => {
+    const lanternId = db.prepare("SELECT id FROM items WHERE name = 'Lantern'").get().id
+    expect(checkDiscovery(db, playerId, {
+      action: 'move', roomId: 'dungeon_library', wx: 5, wy: 4, wz: 3, itemId: null,
+    })).toBeNull()  // no Lantern
+    expect(checkDiscovery(db, playerId, {
+      action: 'move', roomId: 'dungeon_library', wx: 5, wy: 4, wz: 3, itemId: lanternId,
+    })?.secretId).toBe('secret_archivist')
+  })
+
   it('equips the unlocked cosmetic on a cosmetic-effect discovery', () => {
     checkDiscovery(db, playerId, {
       action: 'reach_counterweight', roomId: 'overworld', wx: 8, wy: 11, wz: 2, itemId: null,

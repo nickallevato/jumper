@@ -11,10 +11,6 @@
 
 ## Now (next iteration)
 
-### 7. The Sunken Library (dungeon) — *Pillars 1,2 · Size L*
-Dark dungeon, drifting book-stack platforms; Lantern reveals hidden shelves. Dungeons + Lantern
-reveal + camera-follow now exist — fully unblocked.
-
 ## Later
 
 ### 14. Landing dust puff — *Pillars 5 · Size S*
@@ -60,6 +56,13 @@ Pan sound effects left/right by the source's screen-x for spatial feel (builds o
 
 ### 28. Mute persistence + volume — *Pillars 6 · Size S*
 Remember mute state (and later volume) in localStorage so the choice survives reloads.
+
+### 29. Drifting library platforms — *Pillars 2,5 · Size M*
+Gentle vertical oscillation of book-stack platforms (tailored moving-platform variant; the
+"drifting book-stacks" from the original Sunken Library design).
+
+### 30. Dungeon vignette — *Pillars 5 · Size S*
+A dark edge gradient overlay in dungeon rooms for mood/atmosphere; camera-fixed.
 
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
@@ -114,6 +117,10 @@ reveal now exist — this is unblocked.
   tracks the standing surface with a height fade. Player/Remote/items/bell all consistent.
 - ✓ Synthesized sound effects — WebAudio blips for jump/land/kick/pogo/bounce/pickup/discover/
   bell; lazy AudioContext, M toggles mute (persisted in localStorage).
+- ✓ Platform landing fix (player-reported) — landing footprint used `floor(tx)`, offset half a
+  tile from the centered diamond; switched to `round` so the target sits where the platform looks.
+- ✓ The Sunken Library — dark dungeon (overworld portal 2,7); visible book-stacks climb partway,
+  Lantern reveals the final shelves to the archive ledge → `secret_archivist`.
 
 ---
 

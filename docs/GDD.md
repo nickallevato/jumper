@@ -60,6 +60,13 @@ is clamped to the room's content bounds — **per-room camera-follow** (default 
 rooms statically framed as before. Ringing the bell is a **world event**: the server `io.emit`s
 `world:event` to everyone in every room, who see a "a bell tolls in the distance" banner.
 
+`dungeon_library` (the Sunken Library) is a dark archive reached via the overworld portal at
+(2,7): visible book-stack platforms climb partway, and Lantern-revealed hidden shelves complete
+the climb to an archive ledge that records `secret_archivist` (move there holding the Lantern).
+
+Platform landing uses a tile-centered footprint (`round(tx)`), matching the diamond's drawn
+position, so feet land where the platform visually is.
+
 The overworld has elevated platforms players can jump onto, and three secret trigger zones.
 
 ## 6. Movement (implemented — see `client/src/Player.js`)

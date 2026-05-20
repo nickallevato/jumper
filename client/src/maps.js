@@ -82,6 +82,27 @@ const BELLTOWER_PLATFORMS = [
   { tx: 3, ty: 1, tz: 5.4 },  // bell platform
 ]
 
+// The Sunken Library — a dark archive. Visible book-stacks climb partway; the final
+// shelves are hidden and only appear (and become solid) while holding the Lantern.
+const LIBRARY_GRID = [
+  [2,2,2,2,2,2,2,2,2,2],
+  [2,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,2],
+  [2,2,2,2,2,2,2,2,2,2],
+]
+
+const LIBRARY_PLATFORMS = [
+  { tx: 2, ty: 2, tz: 0.9 },   // visible book-stacks
+  { tx: 2, ty: 3, tz: 1.8 },
+  { tx: 2, ty: 4, tz: 2.7 },
+]
+
 export const ROOMS = {
   overworld: {
     grid: OVERWORLD_GRID,
@@ -91,6 +112,7 @@ export const ROOMS = {
     portals: [
       { tx: 13, ty: 13, to: 'dungeon_grove' },
       { tx: 13, ty: 2, to: 'dungeon_belltower' },
+      { tx: 2, ty: 7, to: 'dungeon_library' },
     ],
     doors: doorsForRoom('overworld'),
   },
@@ -117,6 +139,20 @@ export const ROOMS = {
     portals: [{ tx: 4, ty: 4, to: 'overworld' }],
     follow: true,                              // tall room — camera follows the player
     bell: { tx: 3, ty: 1, tz: 5.4, reachZ: 5.0 },
+  },
+  dungeon_library: {
+    grid: LIBRARY_GRID,
+    platforms: LIBRARY_PLATFORMS,
+    spawn: { tx: 5, ty: 8 },
+    bg: '#0a0a14',
+    portals: [{ tx: 1, ty: 1, to: 'overworld' }],
+    follow: true,
+    // Hidden shelves bridge from the top book-stack to the archive ledge — Lantern only.
+    hidden: [
+      { tx: 3, ty: 4, tz: 3.3 },
+      { tx: 4, ty: 4, tz: 3.9 },
+      { tx: 5, ty: 4, tz: 3.9 },   // archive ledge → secret_archivist (move here w/ Lantern)
+    ],
   },
 }
 
