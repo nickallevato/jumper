@@ -5,8 +5,8 @@ export default defineConfig({
   build: { outDir: '../dist', emptyOutDir: true },
   server: {
     proxy: {
-      '/socket.io': { target: 'http://localhost:3000', ws: true },
-      '/api': 'http://localhost:3000',
+      '/socket.io': { target: 'http://localhost:3002', ws: true },
+      '/api': 'http://localhost:3002',
     },
   },
 })
