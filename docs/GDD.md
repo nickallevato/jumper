@@ -105,6 +105,9 @@ Client sends position on change; server broadcasts per-room player lists at 20 t
 (`TICK_MS=50`). Client interpolates remote players. Item world-state broadcast on change.
 Discoveries are private. Head-bounce pair detection runs in the server tick loop.
 
+**Emotes:** press `F` to wave — shown locally and relayed (`emote`) to others in the same room
+as a brief bubble above the head. Lets strangers communicate without chat (chat is out of scope).
+
 ## 10. Cosmetics (implemented — `shared/cosmetics.js`)
 
 Unlocked through discovery, never bought or freely chosen. The shared catalog (single source of

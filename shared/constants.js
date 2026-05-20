@@ -43,4 +43,5 @@ export const SOCKET_EVENTS = {
   BOUNCE_HEAD:   'bounce:head',
   PUZZLE_STATE:  'puzzle:state',
   DOOR_OPEN:     'door:open',
+  EMOTE:         'emote',
 }

@@ -158,6 +158,10 @@ export class WorldScene extends Phaser.Scene {
       this._heldItem = null   // a Key we used is consumed
     })
 
+    socket.on(E.EMOTE, ({ id, type }) => {
+      this.remotePlayers.get(id)?.showEmote(type)
+    })
+
     socket.on(E.PUZZLE_STATE, ({ raised }) => {
       if (!this.riser) return
       const { loweredZ, raisedZ } = COUNTERWEIGHT.riser
@@ -176,6 +180,12 @@ export class WorldScene extends Phaser.Scene {
       const state = this.player.getState()
       this._socket.emit(E.ITEM_DROP, { x: state.x, y: state.y, z: state.z })
       this._heldItem = null
+    })
+
+    // F = wave emote (shown locally + relayed to others in the room).
+    this.input.keyboard.on('keydown-F', () => {
+      this.player.showEmote('wave')
+      this._socket.emit(E.EMOTE, { type: 'wave' })
     })
 
     // E = use held item on a nearby door (server validates it's a Key).
@@ -408,5 +418,6 @@ export class WorldScene extends Phaser.Scene {
     socket.off(E.BOUNCE_HEAD)
     socket.off(E.PUZZLE_STATE)
     socket.off(E.DOOR_OPEN)
+    socket.off(E.EMOTE)
   }
 }

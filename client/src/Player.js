@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { toScreen } from './iso.js'
 import { cosmeticById } from '../../shared/cosmetics.js'
+import { showEmoteAbove } from './emote.js'
 import {
   TILE_H, MOVE_SPEED, GRAVITY, ITEM_EFFECTS,
   MIN_JUMP_VEL, JUMP_HOLD_GRAV_FACTOR,
@@ -260,6 +261,11 @@ export class Player {
     this._coyoteTimer = 0
     this._landedAt = now
     this._squash(1.4, 0.65, 70)
+  }
+
+  // Transient emote bubble above the head (local + relayed to others).
+  showEmote(type) {
+    showEmoteAbove(this.scene, this.gfx, type)
   }
 
   // Server-driven head bounce (Mechanic 5)

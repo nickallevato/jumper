@@ -110,6 +110,14 @@ export function attachRooms(io, db) {
       }
     })
 
+    socket.on(S.EMOTE, ({ type }) => {
+      if (!playerId) return
+      const state = players.get(playerId)
+      if (!state?.roomId) return
+      // Relay to everyone else in the room; the emoter shows it locally already.
+      socket.to(state.roomId).emit(S.EMOTE, { id: playerId, type })
+    })
+
     socket.on(S.DISCOVER, ({ action, wx, wy, wz, itemId }) => {
       if (!playerId) return
       const state = players.get(playerId)

@@ -17,6 +17,9 @@ First to ring the bell triggers a world event in the overworld. Depends on #1.
 
 ## Later
 
+### 12. Synthesized sound effects — *Pillars 5 · Size M*
+WebAudio-generated blips for jump / land / discover / pickup — no asset files. Adds feel/juice.
+
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
 original design ("unlocked by diving into a specific cracked floor tile"). Combines the dive verb
@@ -53,6 +56,8 @@ Hidden tiles that only render when a player holding the Lantern is nearby. Enabl
   use, server-authoritative door state, `secret_locksmith` cosmetic, Lantern reward inside.
 - ✓ Discovery counter HUD — camera-fixed `✦ N` of secrets found (unhinted: no totals/names),
   pops on each new discovery, persists across rooms via the profile.
+- ✓ Emote / wave — press F to wave, relayed to others in the room as a bubble above the head;
+  strangers communicate without chat (cooperative pillar).
 
 ---
 

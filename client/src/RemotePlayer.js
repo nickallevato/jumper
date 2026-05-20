@@ -1,6 +1,7 @@
 import { toScreen } from './iso.js'
 import { TILE_H } from '../../shared/constants.js'
 import { cosmeticById } from '../../shared/cosmetics.js'
+import { showEmoteAbove } from './emote.js'
 
 export class RemotePlayer {
   constructor(scene, id, x, y, z, cosmeticId = 1) {
@@ -42,6 +43,10 @@ export class RemotePlayer {
     g.fillCircle(3, -27, 1.5)
     g.fillStyle(0xffffff, 0.45)
     g.fillCircle(-2, -31, 2)
+  }
+
+  showEmote(type) {
+    showEmoteAbove(this.scene, this.gfx, type)
   }
 
   updateTarget(x, y, z, cosmeticId) {
