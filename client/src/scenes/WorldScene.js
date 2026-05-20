@@ -332,7 +332,7 @@ export class WorldScene extends Phaser.Scene {
     g.fillRect(-9, -14, 18, 4)           // rim
     g.fillStyle(0x8a5a00, 1)
     g.fillCircle(0, -10, 2.5)            // clapper
-    g.setPosition(x, y - TILE_H / 2)
+    g.setPosition(x, y)                  // base anchored on the bell-platform top (same convention as the player)
     g.setDepth(900)
     this.tweens.add({ targets: g, angle: { from: -6, to: 6 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
   }
@@ -396,7 +396,7 @@ export class WorldScene extends Phaser.Scene {
       const { x, y } = toScreen(item.wx, item.wy, item.wz, originX, originY)
       const g = this.add.graphics()
       g.fillStyle(0xfab387, 1)
-      g.fillCircle(0, 0, 6)
+      g.fillCircle(0, -6, 6)   // bottom of the orb rests on the tile-top diamond center (toScreen base)
       g._baseX = x
       g._baseY = y
       g.setPosition(x, y)

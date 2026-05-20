@@ -51,6 +51,13 @@ Slow drifting particles in dungeon rooms for atmosphere; cheap mood without game
 ### 24. Distance-faded remote players — *Pillars 5 · Size S*
 Remote players far from you render slightly transparent as a depth/focus cue.
 
+### 25. Ambient room drone — *Pillars 5 · Size M*
+A soft looping pad/drone per room for mood (distinct tone per area). WebAudio, no assets.
+
+### 26. Controls help overlay — *Pillars 6 · Size S*
+A toggleable panel showing basic movement controls only (WASD/jump/emote/use) — never discovery
+hints, so it stays true to "discovery is the game".
+
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
 original design ("unlocked by diving into a specific cracked floor tile"). Combines the dive verb
@@ -99,6 +106,9 @@ reveal now exist — this is unblocked.
   reached via overworld portal (13,2); reach the bell at the top for `secret_bell`.
 - ✓ World-event bell broadcast — ringing the bell `io.emit`s a world event; everyone in every
   room sees a "a bell tolls in the distance" banner.
+- ✓ Iso alignment quality pass (player-reported) — feet/shadow/tile-platform tops were misaligned
+  (`-TILE_H/2` float + shadow pinned to ground). Established one anchor convention; shadow now
+  tracks the standing surface with a height fade. Player/Remote/items/bell all consistent.
 
 ---
 

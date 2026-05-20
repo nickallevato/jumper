@@ -141,6 +141,12 @@ are catalogued but only auto-equip via the cosmetic-effect path, not area unlock
 World coords `(tx, ty, tz)` → screen via `iso.js`. `tz` is height (jump). Painter's order
 back-to-front. 3D-look tiles, elevated platforms, drop shadows.
 
+**Anchor convention:** every entity's visual base sits exactly on the top-face diamond center of
+the tile/platform it occupies — at `toScreen(tx,ty,tz)` with no extra vertical offset (art has its
+base at local y≈0). The shadow rests on the highest surface at or below the entity's column (its
+`tz` when grounded, else the platform/ground below) and shrinks/fades with height. Player,
+RemotePlayer, world items, plate, riser, hidden platforms, and the bell all follow this.
+
 ---
 
 ## Known gaps (the "looks done but isn't" list)

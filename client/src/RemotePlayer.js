@@ -1,5 +1,4 @@
 import { toScreen } from './iso.js'
-import { TILE_H } from '../../shared/constants.js'
 import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
 
@@ -65,13 +64,19 @@ export class RemotePlayer {
     this._syncPosition()
   }
 
+  // Same anchor convention as Player: the blob's feet rest at toScreen(tx,ty,tz)
+  // with no extra offset. Remote players carry no platform data, so their shadow
+  // is pinned to ground (tz=0) and uses height fade/shrink as the only depth cue.
   _syncPosition() {
     const originX = this.scene.scale.width / 2
     const originY = 80
     const ground = toScreen(this.tx, this.ty, 0, originX, originY)
     this.shadowGfx.setPosition(ground.x, ground.y)
     const { x, y } = toScreen(this.tx, this.ty, this.tz, originX, originY)
-    this.gfx.setPosition(x, y - TILE_H / 2)
+    this.gfx.setPosition(x, y)
+    const k = 1 / (1 + Math.max(0, this.tz) * 0.5)
+    this.shadowGfx.setScale(k, k)
+    this.shadowGfx.setAlpha(0.28 * k)
     this.indicatorGfx.setPosition(this.gfx.x, this.gfx.y - 34)
   }
 

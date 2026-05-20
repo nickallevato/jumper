@@ -3,7 +3,7 @@ import { toScreen, screenToTileDir } from './iso.js'
 import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
 import {
-  TILE_H, MOVE_SPEED, GRAVITY, ITEM_EFFECTS,
+  MOVE_SPEED, GRAVITY, ITEM_EFFECTS,
   MIN_JUMP_VEL, JUMP_HOLD_GRAV_FACTOR,
   COYOTE_VEL, COYOTE_TIME_MS,
   WALL_SLIDE_GRAV_FACTOR, WALL_KICK_SPEED, DOUBLE_TAP_MS, WALL_KICK_COOLDOWN_MS,
@@ -289,16 +289,41 @@ export class Player {
     this._squash(0.85, 1.3, 90)
   }
 
+  // Anchor convention: an entity's visual base sits exactly on the top-face
+  // diamond center of the tile/platform it occupies — i.e. at toScreen(tx,ty,tz),
+  // drawn with NO extra vertical offset. The blob art has its feet at local y≈0,
+  // so positioning gfx straight at toScreen seats the feet on the surface. The
+  // shadow lands on the highest surface at or below the player's column (its tz),
+  // so it stays under the feet on platforms and falls to ground when airborne.
   _syncPosition() {
     const originX = this.scene.scale.width / 2
     const originY = 80
-    const ground = toScreen(this.tx, this.ty, 0, originX, originY)
+    const shadowZ = this._shadowZ()
+    const ground = toScreen(this.tx, this.ty, shadowZ, originX, originY)
     this.shadowGfx.setPosition(ground.x, ground.y)
     const { x, y } = toScreen(this.tx, this.ty, this.tz, originX, originY)
     const wallNudge = this._isWallSliding ? -this._wallDir.x * 2 : 0
-    this.gfx.setPosition(x + wallNudge, y - TILE_H / 2)
+    this.gfx.setPosition(x + wallNudge, y)
     this.gfx.setScale(this._scaleX, this._scaleY)
+    // Height cue: shadow shrinks + fades as the player rises above its surface.
+    const lift = Math.max(0, this.tz - shadowZ)
+    const k = 1 / (1 + lift * 0.5)
+    this.shadowGfx.setScale(k, k)
+    this.shadowGfx.setAlpha(0.28 * k)
     this.indicatorGfx.setPosition(this.gfx.x, this.gfx.y - 34)
+  }
+
+  // The z of the surface the shadow rests on: the player's standing height when
+  // grounded, else the highest platform at this tile with tz ≤ player tz, else ground (0).
+  _shadowZ() {
+    if (this.onGround) return this.tz
+    const fx = Math.floor(this.tx)
+    const fy = Math.floor(this.ty)
+    let z = 0
+    for (const p of this._platforms) {
+      if (p.tx === fx && p.ty === fy && p.tz <= this.tz && p.tz > z) z = p.tz
+    }
+    return z
   }
 
   getState() {
