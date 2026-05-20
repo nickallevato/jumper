@@ -13,8 +13,8 @@
 
 The loop grows the overworld one band per iteration, alternating append directions.
 To grow: append the next direction to `OVERWORLD_GROWTH` in `client/src/maps.js`.
-- Applied so far: **east, south, east, south**
-- **Next direction: east**
+- Applied so far: **east, south, east, south, east**
+- **Next direction: south** (note: cols now at 64 cap — next east will be a no-op)
 - Rotation: east → south → east → south … (append-only; W/N deferred — would need a
   coordinate-offset refactor since secret zones/puzzle coords are absolute). Cap 64/dim.
 
@@ -82,6 +82,10 @@ Extend idle breathing/bob to remote players (detect a stationary interpolation t
 ### 36. Landmark beacons in grown areas — *Pillars 1,5 · Size M*
 Occasional tall markers/structures seeded into the expanding bands so the open world has
 something to navigate toward (grown areas are currently featureless).
+
+### 40. Biome tinting per region — *Pillars 5 · Size M*
+Shift the ground palette gradually by distance from origin so parts of the growing world feel
+like distinct regions.
 
 ### 37. Minimap for the growing world — *Pillars 6 · Size M*
 A small camera-fixed overview of the overworld bounds + your position + portal locations.
@@ -164,6 +168,8 @@ reveal now exist — this is unblocked.
 - ✓ Portal color tiering — distinct color per portal destination (grove green, belltower gold,
   library violet, return sky) for at-a-glance wayfinding.
 - ✓ World growth: south band → overworld now 48x48.
+- ✓ Spawn-relative compass — edge arrow points home when spawn is off-screen (large-world nav).
+- ✓ World growth: east band → overworld now 48x64 (cols at 64 cap).
 
 ---
 

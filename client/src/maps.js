@@ -52,7 +52,7 @@ function expandSouth(grid) {
 }
 
 // Applied growth, oldest first. The loop appends the next direction each iteration.
-const OVERWORLD_GROWTH = ['east', 'south', 'east', 'south']
+const OVERWORLD_GROWTH = ['east', 'south', 'east', 'south', 'east']
 
 function buildOverworld() {
   let g = OVERWORLD_BASE

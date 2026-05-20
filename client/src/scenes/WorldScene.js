@@ -96,6 +96,12 @@ export class WorldScene extends Phaser.Scene {
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(1000)
     this._setRoomCount(1)
 
+    // Spawn-relative compass — an edge arrow pointing home when spawn is off-screen.
+    this._spawnScreen = toScreen(spawn.tx, spawn.ty, 0, originX, originY)
+    this._compass = this.add.graphics().setScrollFactor(0).setDepth(1000).setVisible(false)
+    this._compass.fillStyle(0xf9e2af, 0.95)
+    this._compass.fillTriangle(0, -8, 7, 7, -7, 7)   // points "up" by default
+
     this.cursors = this.input.keyboard.createCursorKeys()
     this.keys = this.input.keyboard.addKeys({
       w: Phaser.Input.Keyboard.KeyCodes.W,
@@ -493,6 +499,8 @@ export class WorldScene extends Phaser.Scene {
 
     // Interpolate remote players
     for (const rp of this.remotePlayers.values()) rp.update()
+
+    this._updateCompass()
   }
 
   _discoveryLabel() {
@@ -502,6 +510,20 @@ export class WorldScene extends Phaser.Scene {
   _setRoomCount(n) {
     const count = Math.max(1, n | 0)
     this._countHud?.setText(count === 1 ? 'here alone' : `${count} here`)
+  }
+
+  // Point the compass at spawn when it's outside the viewport; hide it when spawn is visible.
+  _updateCompass() {
+    if (!this._compass) return
+    const cam = this.cameras.main
+    const dx = this._spawnScreen.x - (cam.scrollX + cam.width / 2)
+    const dy = this._spawnScreen.y - (cam.scrollY + cam.height / 2)
+    const halfW = cam.width / 2 - 40, halfH = cam.height / 2 - 40
+    if (Math.abs(dx) < halfW && Math.abs(dy) < halfH) { this._compass.setVisible(false); return }
+    const m = 30
+    const px = cam.width / 2 + Math.max(-cam.width / 2 + m, Math.min(cam.width / 2 - m, dx))
+    const py = cam.height / 2 + Math.max(-cam.height / 2 + m, Math.min(cam.height / 2 - m, dy))
+    this._compass.setPosition(px, py).setRotation(Math.atan2(dy, dx) + Math.PI / 2).setVisible(true)
   }
 
   // Update the counter and pop it briefly to acknowledge a new find.
