@@ -13,8 +13,8 @@
 
 The loop grows the overworld one band per iteration, alternating append directions.
 To grow: append the next direction to `OVERWORLD_GROWTH` in `client/src/maps.js`.
-- Applied so far: **east**
-- **Next direction: south**
+- Applied so far: **east, south**
+- **Next direction: east**
 - Rotation: east → south → east → south … (append-only; W/N deferred — would need a
   coordinate-offset refactor since secret zones/puzzle coords are absolute). Cap 64/dim.
 
@@ -32,9 +32,6 @@ Discoverable world element with item synergy; enables reaching otherwise-impossi
 ### 16. Moving patrol platform — *Pillars 2,5 · Size M*
 A platform that oscillates between two points (server-authoritative position). Ride it or time
 jumps onto it. Enriches dungeons and the future Belltower.
-
-### 18. Idle bob animation — *Pillars 5 · Size S*
-Players gently bob/breathe when standing still. Cheap liveliness; reads as "alive" not frozen.
 
 ### 20. Fall-out recovery — *Pillars 6 · Size S*
 If a player drops below the floor (off a tall ledge in a follow-room), respawn at room spawn
@@ -75,6 +72,12 @@ An expanding ring effect at the player's position when a secret fires; reinforce
 
 ### 32. Parallax background layer — *Pillars 5 · Size M*
 A faint parallax starfield/pattern behind the world for depth; scrolls slower than the camera.
+
+### 33. Camera deadzone for follow — *Pillars 5 · Size S*
+A small deadzone on the follow camera so tiny movements don't jitter the view.
+
+### 34. Remote player idle bob — *Pillars 5 · Size S*
+Extend idle breathing/bob to remote players (detect a stationary interpolation target).
 
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
@@ -144,6 +147,8 @@ reveal now exist — this is unblocked.
 - ✓ Raised walls (player-reported) — walls drew at tz=0 with depth extending downward (sunken),
   so a player next to a wall looked ~half a tile too high; walls now render as raised blocks
   (top one tile up, body to the ground), consistent with platform pillars.
+- ✓ Idle bob — local player gently breathes (subtle vertical bob) when standing still on ground.
+- ✓ World growth: south band → overworld now 32x32.
 
 ---
 

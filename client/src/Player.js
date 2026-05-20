@@ -39,6 +39,10 @@ export class Player {
     this._targetScaleX = 1; this._targetScaleY = 1
     this._squashResetAt = 0
 
+    // Idle bob (gentle breathing when standing still)
+    this._bobT = 0
+    this._bobOffset = 0
+
     const sg = scene.add.graphics()
     sg.fillStyle(0x000000, 0.28)
     sg.fillEllipse(0, 0, 20, 8)
@@ -245,6 +249,11 @@ export class Player {
     this._scaleX += (this._targetScaleX - this._scaleX) * 0.25
     this._scaleY += (this._targetScaleY - this._scaleY) * 0.25
 
+    // Idle bob — gentle breathing offset while standing still on the ground
+    const idle = mx === 0 && my === 0 && this.onGround
+    this._bobT += ms
+    this._bobOffset = idle ? Math.sin(this._bobT * 0.005) * 1.5 : 0
+
     this._syncPosition()
 
     // --- Discovery emits (existing) ---
@@ -315,7 +324,7 @@ export class Player {
     this.shadowGfx.setPosition(ground.x, ground.y)
     const { x, y } = toScreen(this.tx, this.ty, this.tz, originX, originY)
     const wallNudge = this._isWallSliding ? -this._wallDir.x * 2 : 0
-    this.gfx.setPosition(x + wallNudge, y)
+    this.gfx.setPosition(x + wallNudge, y + this._bobOffset)
     this.gfx.setScale(this._scaleX, this._scaleY)
     // Height cue: shadow shrinks + fades as the player rises above its surface.
     const lift = Math.max(0, this.tz - shadowZ)
