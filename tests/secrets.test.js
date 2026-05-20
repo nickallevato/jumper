@@ -90,6 +90,16 @@ describe('secrets', () => {
     expect(result?.secretId).toBe('secret_illuminated')
   })
 
+  it('records secret_bell when ringing the bell at the tower top', () => {
+    expect(checkDiscovery(db, playerId, {
+      action: 'ring_bell', roomId: 'dungeon_belltower', wx: 3, wy: 1, wz: 5, itemId: null,
+    })?.secretId).toBe('secret_bell')
+    // Wrong room → nothing
+    expect(checkDiscovery(db, playerId, {
+      action: 'ring_bell', roomId: 'overworld', wx: 3, wy: 1, wz: 5, itemId: null,
+    })).toBeNull()
+  })
+
   it('equips the unlocked cosmetic on a cosmetic-effect discovery', () => {
     checkDiscovery(db, playerId, {
       action: 'reach_counterweight', roomId: 'overworld', wx: 8, wy: 11, wz: 2, itemId: null,

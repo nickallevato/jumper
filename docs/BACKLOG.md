@@ -11,9 +11,9 @@
 
 ## Now (next iteration)
 
-### 3. The Belltower (first designed dungeon) — *Pillars 1,2,5 · Size M · Gap ✗ (depends on #1)*
-Tall vertical wall-kick shaft, ~4 tiles wide, spiraling ledges. Showcases the new wall-kick tech.
-First to ring the bell triggers a world event in the overworld. Depends on #1.
+### 7. The Sunken Library (dungeon) — *Pillars 1,2 · Size L*
+Dark dungeon, drifting book-stack platforms; Lantern reveals hidden shelves. Dungeons + Lantern
+reveal + camera-follow now exist — fully unblocked.
 
 ## Later
 
@@ -31,11 +31,6 @@ Discoverable world element with item synergy; enables reaching otherwise-impossi
 A platform that oscillates between two points (server-authoritative position). Ride it or time
 jumps onto it. Enriches dungeons and the future Belltower.
 
-### 17. Camera-follow + vertical levels — *Pillars 6 · Size M · Gap ✓ (blocks #3, #7)*
-Smooth camera follow with world bounds, per-room opt-in (default off so existing small rooms are
-unchanged). The recurring blocker for tall/large rooms — needed before the Belltower or Sunken
-Library can render properly.
-
 ### 18. Idle bob animation — *Pillars 5 · Size S*
 Players gently bob/breathe when standing still. Cheap liveliness; reads as "alive" not frozen.
 
@@ -46,6 +41,13 @@ distance"). The cross-room social payoff from the original Belltower design.
 ### 20. Fall-out recovery — *Pillars 6 · Size S*
 If a player drops below the floor (off a tall ledge in a follow-room), respawn at room spawn
 instead of falling forever. Safety net for vertical levels.
+
+### 21. Camera punch / shake on discovery — *Pillars 5 · Size S*
+A brief zoom-punch + shake when a discovery fires; juice that makes finds feel momentous.
+
+### 22. Belltower checkpoints — *Pillars 6 · Size S*
+Respawn at the highest ledge reached so a missed jump doesn't drop you to the very bottom.
+Reduces frustration on vertical climbs.
 
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
@@ -91,6 +93,8 @@ reveal now exist — this is unblocked.
 - ✓ Room player-count HUD — camera-fixed "N here" / "here alone", updated off the tick list.
 - ✓ Screen-relative WASD — W = straight up on screen (was a 45° grid axis); `screenToTileDir`
   maps input intent to tile space (player-requested feel fix).
+- ✓ Camera-follow (per-room opt-in, content-clamped) + The Belltower — tall spiral-ledge shaft
+  reached via overworld portal (13,2); reach the bell at the top for `secret_bell`.
 
 ---
 

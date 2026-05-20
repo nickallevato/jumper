@@ -32,6 +32,8 @@ export class WorldScene extends Phaser.Scene {
     this.portals = room.portals ?? []
     this.doors = room.doors ?? []
     this._openDoors = new Set()
+    this._bell = room.bell ?? null
+    this._rang = false
     this.cameras.main.setBackgroundColor(room.bg ?? '#1a1a2e')
     this.cameras.main.fadeIn(180, 0, 0, 0)
     this._transitioning = false
@@ -68,6 +70,15 @@ export class WorldScene extends Phaser.Scene {
     this._hidden = room.hidden ?? []
     this._hiddenGfx = this._hidden.map(p => this._drawHidden(p, originX, originY))
     this._applyReveal()
+
+    if (this._bell) this._drawBell(originX, originY)
+
+    // Tall/large rooms: camera follows the player, clamped to the room's content bounds.
+    if (room.follow) {
+      const b = this._computeBounds(originX, originY)
+      this.cameras.main.setBounds(b.x, b.y, b.w, b.h)
+      this.cameras.main.startFollow(this.player.gfx, true, 0.12, 0.12)
+    }
 
     // Brief grace so we don't instantly re-trigger the portal we just arrived through.
     this._portalLock = true
@@ -292,6 +303,36 @@ export class WorldScene extends Phaser.Scene {
     ], true)
   }
 
+  // Screen-space bounding rect covering all tiles + platforms, with margin (for camera clamp).
+  _computeBounds(originX, originY) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+    const consider = (tx, ty, tz) => {
+      const { x, y } = toScreen(tx, ty, tz, originX, originY)
+      minX = Math.min(minX, x - TILE_W / 2); maxX = Math.max(maxX, x + TILE_W / 2)
+      minY = Math.min(minY, y - TILE_H / 2); maxY = Math.max(maxY, y + TILE_H + 40)
+    }
+    for (let ty = 0; ty < this.grid.length; ty++)
+      for (let tx = 0; tx < this.grid[ty].length; tx++)
+        if (this.grid[ty][tx]) consider(tx, ty, 0)
+    for (const p of this._basePlatforms) consider(p.tx, p.ty, p.tz)
+    const m = 140
+    return { x: minX - m, y: minY - m, w: (maxX - minX) + 2 * m, h: (maxY - minY) + 2 * m }
+  }
+
+  // The bell at the top of the tower — gold; reaching it records secret_bell.
+  _drawBell(originX, originY) {
+    const { x, y } = toScreen(this._bell.tx, this._bell.ty, this._bell.tz, originX, originY)
+    const g = this.add.graphics()
+    g.fillStyle(0xffd43b, 1)
+    g.fillEllipse(0, -20, 16, 18)        // bell body
+    g.fillRect(-9, -14, 18, 4)           // rim
+    g.fillStyle(0x8a5a00, 1)
+    g.fillCircle(0, -10, 2.5)            // clapper
+    g.setPosition(x, y - TILE_H / 2)
+    g.setDepth(900)
+    this.tweens.add({ targets: g, angle: { from: -6, to: 6 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+  }
+
   // A hidden platform, drawn as a ghostly box (hidden until the Lantern reveals it).
   _drawHidden(p, originX, originY) {
     const g = this.add.graphics()
@@ -387,6 +428,17 @@ export class WorldScene extends Phaser.Scene {
       }
     }
 
+    // Ring the bell: reaching the top platform records the discovery (once).
+    if (this._bell && !this._rang &&
+        Math.hypot(this.player.tx - this._bell.tx, this.player.ty - this._bell.ty) < 0.6 &&
+        this.player.tz >= this._bell.reachZ) {
+      this._rang = true
+      this._socket.emit(E.DISCOVER, {
+        action: 'ring_bell', wx: this._bell.tx, wy: this._bell.ty,
+        wz: Math.floor(this.player.tz), itemId: null,
+      })
+    }
+
     // Send position to server (only when changed)
     const state = this.player.getState()
     const last = this._lastState
@@ -448,7 +500,7 @@ export class WorldScene extends Phaser.Scene {
       this.scale.height / 2 - 60,
       '✦ discovered',
       { color: '#a6e3a1', fontSize: '22px', fontStyle: 'bold' }
-    ).setOrigin(0.5).setAlpha(0)
+    ).setOrigin(0.5).setAlpha(0).setScrollFactor(0).setDepth(1000)
 
     this.tweens.add({
       targets: text,

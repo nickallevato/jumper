@@ -53,6 +53,12 @@ recomputed on discovery. Gates area access; not shown to the player.
   `client/src/maps.js`; WorldScene renders whichever room it's started with and fades between them.
 - **Small rooms** — soft cap (`ROOM_CAP_SMALL=6`) enforced for `small_*` rooms. *No content yet.*
 
+`dungeon_belltower` is a tall vertical shaft (ungated): ledges spiral up the walls (wall-kick
+shortcuts possible, normal-jump climb intended), a bell at the top records `secret_bell`. Reached
+via the overworld portal at (13,2). It sets `follow: true`, so the camera follows the player and
+is clamped to the room's content bounds — **per-room camera-follow** (default off) keeps small
+rooms statically framed as before.
+
 The overworld has elevated platforms players can jump onto, and three secret trigger zones.
 
 ## 6. Movement (implemented — see `client/src/Player.js`)

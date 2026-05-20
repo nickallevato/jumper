@@ -72,6 +72,14 @@ const TRIGGERS = [
     itemName: 'Lantern',
     effect:   { type: 'cosmetic', value: 'illuminated' },
   },
+  {
+    secretId: 'secret_bell',
+    roomId:   'dungeon_belltower',
+    zone:     { x: [3, 3], y: [1, 1] },
+    action:   'ring_bell',
+    itemName: null,
+    effect:   { type: 'cosmetic', value: 'bell_ringer' },
+  },
 ]
 
 function matchesTrigger(trigger, { action, roomId, wx, wy, itemName }) {

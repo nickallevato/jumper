@@ -15,6 +15,7 @@ export const COSMETICS = [
   { name: 'counterweight',unlock: 'secret_counterweight', body: 0x9399b2, head: 0xc7cbe0, accent: 0x4c4f69 },
   { name: 'locksmith',    unlock: 'secret_locksmith',     body: 0xeed49f, head: 0xfaf3dd, accent: 0xb5651d },
   { name: 'illuminated',  unlock: 'secret_illuminated',   body: 0xf2cdcd, head: 0xfff2cc, accent: 0xffd43b },
+  { name: 'bell_ringer',  unlock: 'secret_bell',          body: 0xd4a017, head: 0xffe08a, accent: 0x8a5a00 },
 ]
 
 // 1-based id → cosmetic (falls back to default).

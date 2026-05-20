@@ -62,13 +62,36 @@ const GROVE_PLATFORMS = [
   { tx: 7, ty: 6, tz: 0.5 },
 ]
 
+// The Belltower — a tall narrow shaft. Ledges spiral up the walls (wall-kick shortcuts
+// possible); a normal-jump climb (each step +0.9 tz) reaches the bell at the top.
+const BELLTOWER_GRID = [
+  [2,2,2,2,2,2],
+  [2,1,1,1,1,2],
+  [2,1,1,1,1,2],
+  [2,1,1,1,1,2],
+  [2,1,1,1,1,2],
+  [2,2,2,2,2,2],
+]
+
+const BELLTOWER_PLATFORMS = [
+  { tx: 1, ty: 4, tz: 0.9 },
+  { tx: 1, ty: 3, tz: 1.8 },
+  { tx: 1, ty: 2, tz: 2.7 },
+  { tx: 1, ty: 1, tz: 3.6 },
+  { tx: 2, ty: 1, tz: 4.5 },
+  { tx: 3, ty: 1, tz: 5.4 },  // bell platform
+]
+
 export const ROOMS = {
   overworld: {
     grid: OVERWORLD_GRID,
     platforms: OVERWORLD_PLATFORMS,
     spawn: { tx: 8, ty: 8 },
     bg: '#1a1a2e',
-    portals: [{ tx: 13, ty: 13, to: 'dungeon_grove' }],
+    portals: [
+      { tx: 13, ty: 13, to: 'dungeon_grove' },
+      { tx: 13, ty: 2, to: 'dungeon_belltower' },
+    ],
     doors: doorsForRoom('overworld'),
   },
   dungeon_grove: {
@@ -85,6 +108,15 @@ export const ROOMS = {
       { tx: 6, ty: 6, tz: 1.4 },
       { tx: 7, ty: 6, tz: 1.8 },  // goal ledge → secret_illuminated
     ],
+  },
+  dungeon_belltower: {
+    grid: BELLTOWER_GRID,
+    platforms: BELLTOWER_PLATFORMS,
+    spawn: { tx: 2, ty: 4 },
+    bg: '#13111c',
+    portals: [{ tx: 4, ty: 4, to: 'overworld' }],
+    follow: true,                              // tall room — camera follows the player
+    bell: { tx: 3, ty: 1, tz: 5.4, reachZ: 5.0 },
   },
 }
 
