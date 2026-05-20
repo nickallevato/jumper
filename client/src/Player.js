@@ -263,6 +263,12 @@ export class Player {
     this._squash(1.4, 0.65, 70)
   }
 
+  // Authoritative held-item update from the server (drives the indicator + passive effects).
+  setHeldItem(item) {
+    this.heldItem = item ?? null
+    this._updateIndicator()
+  }
+
   // Transient emote bubble above the head (local + relayed to others).
   showEmote(type) {
     showEmoteAbove(this.scene, this.gfx, type)

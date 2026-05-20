@@ -72,9 +72,11 @@ Tunables in `shared/constants.js`. Dive/fast-fall exists as a discovery action o
 
 ## 7. Items (implemented)
 
-One item per player, enforced server-side. Three behaviors: **passive** (movement modifier
-while held — Feather/floaty, Spring/high-jump, Lantern/reveal), **droppable** (drop into world
-with Q, others pick up if empty-handed; auto-pickup within 0.8 tiles), **world-interactive**
+One item per player, enforced server-side. The server privately syncs each player's held item
+(`item:held`) on join, pickup, drop, and Key-use, so the held-item indicator and pickup gate
+always reflect server truth (not just spawn state). Three behaviors: **passive** (movement
+modifier while held — Feather/floaty, Spring/high-jump, Lantern/reveal), **droppable** (drop into
+world with Q, others pick up if empty-handed; auto-pickup within 0.8 tiles), **world-interactive**
 (press E next to a locked door holding a Key → server opens it for the room, consumes the Key,
 records `secret_locksmith`). Held-item indicator dot shown above the head. World items bob.
 

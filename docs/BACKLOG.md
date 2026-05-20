@@ -20,6 +20,13 @@ First to ring the bell triggers a world event in the overworld. Depends on #1.
 ### 12. Synthesized sound effects — *Pillars 5 · Size M*
 WebAudio-generated blips for jump / land / discover / pickup — no asset files. Adds feel/juice.
 
+### 13. Room player-count HUD — *Pillars 4 · Size S*
+A small camera-fixed indicator of how many players are in your current room. Social awareness
+that complements emotes; reads off the tick player list.
+
+### 14. Landing dust puff — *Pillars 5 · Size S*
+A small particle/graphic burst when the player lands, scaled by fall speed. Pure juice.
+
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
 original design ("unlocked by diving into a specific cracked floor tile"). Combines the dive verb
@@ -58,6 +65,9 @@ Hidden tiles that only render when a player holding the Lantern is nearby. Enabl
   pops on each new discovery, persists across rooms via the profile.
 - ✓ Emote / wave — press F to wave, relayed to others in the room as a bubble above the head;
   strangers communicate without chat (cooperative pillar).
+- ✓ Held-item state sync — server privately emits `item:held` (join/pickup/drop/key-use); fixes
+  stale held indicator after pickup/drop, fixes door-open wrongly clearing others' items;
+  foundational for the Lantern reveal mechanic.
 
 ---
 

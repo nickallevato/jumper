@@ -44,4 +44,5 @@ export const SOCKET_EVENTS = {
   PUZZLE_STATE:  'puzzle:state',
   DOOR_OPEN:     'door:open',
   EMOTE:         'emote',
+  ITEM_HELD:     'item:held',
 }

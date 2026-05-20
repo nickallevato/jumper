@@ -155,11 +155,18 @@ export class WorldScene extends Phaser.Scene {
 
     socket.on(E.DOOR_OPEN, ({ tx, ty }) => {
       this._openDoor(tx, ty)
-      this._heldItem = null   // a Key we used is consumed
+      // The Key consumer's held state is corrected privately via item:held — not here,
+      // so a door opening doesn't wrongly clear other players' items.
     })
 
     socket.on(E.EMOTE, ({ id, type }) => {
       this.remotePlayers.get(id)?.showEmote(type)
+    })
+
+    // Authoritative held-item state: keeps the indicator + pickup gate in sync with the server.
+    socket.on(E.ITEM_HELD, ({ item }) => {
+      this._heldItem = item
+      this.player.setHeldItem(item)
     })
 
     socket.on(E.PUZZLE_STATE, ({ raised }) => {
@@ -180,6 +187,7 @@ export class WorldScene extends Phaser.Scene {
       const state = this.player.getState()
       this._socket.emit(E.ITEM_DROP, { x: state.x, y: state.y, z: state.z })
       this._heldItem = null
+      this.player.setHeldItem(null)   // optimistic; server confirms via item:held
     })
 
     // F = wave emote (shown locally + relayed to others in the room).
@@ -419,5 +427,6 @@ export class WorldScene extends Phaser.Scene {
     socket.off(E.PUZZLE_STATE)
     socket.off(E.DOOR_OPEN)
     socket.off(E.EMOTE)
+    socket.off(E.ITEM_HELD)
   }
 }

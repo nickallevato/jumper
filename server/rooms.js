@@ -8,6 +8,13 @@ import { findDoorNear } from '../shared/doors.js'
 
 const S = E
 
+// The item a player currently holds (or null), for private held-state sync.
+function heldItemInfo(db, playerId) {
+  const p = db.prepare('SELECT held_item_id FROM players WHERE id = ?').get(playerId)
+  if (!p?.held_item_id) return null
+  return db.prepare('SELECT id, name, passive_effect FROM items WHERE id = ?').get(p.held_item_id)
+}
+
 export function attachRooms(io, db) {
   // playerId → { socket, roomId, x, y, z, facing, cosmeticId }
   const players = new Map()
@@ -60,6 +67,7 @@ export function attachRooms(io, db) {
         puzzle: { raised: !!puzzleRaised.get(roomId) },
         openDoors: doors,
       })
+      socket.emit(S.ITEM_HELD, { item: heldItemInfo(db, playerId) })
     })
 
     socket.on(S.MOVE, ({ x, y, z, facing }) => {
@@ -74,6 +82,7 @@ export function attachRooms(io, db) {
       const result = pickupItem(db, playerId, worldItemId)
       if (!result.ok) return
       io.to(state.roomId).emit(S.ITEM_STATE, { worldItems: getWorldItems(db, state.roomId) })
+      socket.emit(S.ITEM_HELD, { item: heldItemInfo(db, playerId) })
     })
 
     socket.on(S.ITEM_DROP, ({ x, y, z }) => {
@@ -82,6 +91,7 @@ export function attachRooms(io, db) {
       const result = dropItem(db, playerId, x, y, z, state.roomId)
       if (!result.ok) return
       io.to(state.roomId).emit(S.ITEM_STATE, { worldItems: getWorldItems(db, state.roomId) })
+      socket.emit(S.ITEM_HELD, { item: null })
     })
 
     socket.on(S.ITEM_USE, ({ triggerId, x, y }) => {
@@ -101,6 +111,7 @@ export function attachRooms(io, db) {
         // Consume the Key and tell everyone in the room the door opened.
         db.prepare('UPDATE players SET held_item_id = NULL WHERE id = ?').run(playerId)
         io.to(state.roomId).emit(S.DOOR_OPEN, { tx: door.tx, ty: door.ty })
+        socket.emit(S.ITEM_HELD, { item: null })
 
         const disc = checkDiscovery(db, playerId, {
           action: 'unlock_door', roomId: state.roomId,
