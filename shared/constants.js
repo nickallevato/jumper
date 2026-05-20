@@ -1,9 +1,9 @@
 export const TICK_MS = 50             // 20 ticks/sec
 export const TILE_W = 64
 export const TILE_H = 32
-export const MOVE_SPEED = 4           // tiles per second
-export const JUMP_VELOCITY = 0.4      // tiles/tick upward
-export const GRAVITY = 0.03           // tiles/tick² downward
+export const MOVE_SPEED = 6           // tiles per second
+export const JUMP_VELOCITY = 0.30     // tiles/tick upward
+export const GRAVITY = 0.022          // tiles/tick² downward
 export const ROOM_CAP_SMALL = 6
 export const ROOM_CAP_DUNGEON = 50
 

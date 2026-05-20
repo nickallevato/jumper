@@ -6,12 +6,44 @@ import { getSocket } from '../net.js'
 import { toScreen } from '../iso.js'
 import { SOCKET_EVENTS as E, TILE_H } from '../../../shared/constants.js'
 
-const OVERWORLD_GRID = Array.from({ length: 16 }, (_, ty) =>
-  Array.from({ length: 16 }, (_, tx) => {
-    if (tx === 0 || tx === 15 || ty === 0 || ty === 15) return 2
-    return 1
-  })
-)
+// 2 = wall, 1 = ground
+const OVERWORLD_GRID = [
+  [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
+  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+  [2,1,1,2,2,1,1,1,1,1,1,2,2,1,1,2],
+  [2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,2],
+  [2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,2,2,1,1,2,2,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,1,1,2,2,1,1,2],
+  [2,1,1,2,2,1,1,1,1,1,1,2,1,1,1,2],
+  [2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+  [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
+]
+
+// Elevated platforms — players can jump onto these
+const PLATFORMS = [
+  // Center-north pair (over the secret trigger zone x:5-8, y:5-8)
+  { tx: 7, ty: 5, tz: 1 },
+  { tx: 8, ty: 5, tz: 1 },
+  // Extra step above
+  { tx: 7, ty: 4, tz: 1.5 },
+  // Center-south pair (symmetric landmark)
+  { tx: 7, ty: 9, tz: 1 },
+  { tx: 8, ty: 9, tz: 1 },
+  // Top-right raised area (feather_wind secret zone x:10-13, y:3-6)
+  { tx: 12, ty: 3, tz: 1 },
+  { tx: 13, ty: 3, tz: 1 },
+  { tx: 12, ty: 4, tz: 1 },
+  // Bottom-left step (deep_dive secret zone x:0-3, y:10-13)
+  { tx: 2, ty: 11, tz: 0.75 },
+  { tx: 2, ty: 12, tz: 0.75 },
+]
 
 export class WorldScene extends Phaser.Scene {
   constructor() {
@@ -27,8 +59,8 @@ export class WorldScene extends Phaser.Scene {
     const originX = this.scale.width / 2
     const originY = 80
 
-    this.isoMap = new IsoMap(this, OVERWORLD_GRID, originX, originY)
-    this.player = new Player(this, 8, 8, this.profile)
+    this.isoMap = new IsoMap(this, OVERWORLD_GRID, originX, originY, PLATFORMS)
+    this.player = new Player(this, 8, 8, this.profile, PLATFORMS)
 
     this.cursors = this.input.keyboard.createCursorKeys()
     this.keys = this.input.keyboard.addKeys({
@@ -123,7 +155,7 @@ export class WorldScene extends Phaser.Scene {
 
   update(_time, delta) {
     const dt = delta / 1000
-    this.player.update(dt, this.cursors, this.keys, OVERWORLD_GRID)
+    this.player.update(dt, this.cursors, this.keys, OVERWORLD_GRID, PLATFORMS)
 
     // Send position to server (only when changed)
     const state = this.player.getState()

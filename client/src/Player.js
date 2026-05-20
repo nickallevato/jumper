@@ -1,18 +1,24 @@
 import Phaser from 'phaser'
 import { toScreen } from './iso.js'
-import { TILE_W, TILE_H, MOVE_SPEED, JUMP_VELOCITY, GRAVITY, ITEM_EFFECTS } from '../../shared/constants.js'
+import { TILE_H, MOVE_SPEED, JUMP_VELOCITY, GRAVITY, ITEM_EFFECTS } from '../../shared/constants.js'
 
 export class Player {
-  constructor(scene, tx, ty, profile) {
-    this.scene   = scene
-    this.tx      = tx
-    this.ty      = ty
-    this.tz      = 0
-    this.vz      = 0
-    this.onGround = true
-    this.profile  = profile
-    this.heldItem = profile?.heldItem ?? null
-    this.facing   = 'se'
+  constructor(scene, tx, ty, profile, platforms = []) {
+    this.scene     = scene
+    this.tx        = tx
+    this.ty        = ty
+    this.tz        = 0
+    this.vz        = 0
+    this.onGround  = true
+    this.profile   = profile
+    this.heldItem  = profile?.heldItem ?? null
+    this.facing    = 'se'
+    this._platforms = platforms
+
+    const sg = scene.add.graphics()
+    sg.fillStyle(0x000000, 0.28)
+    sg.fillEllipse(0, 0, 20, 8)
+    this.shadowGfx = sg
 
     const g = scene.add.graphics()
     this._drawShape(g)
@@ -22,7 +28,14 @@ export class Player {
   _drawShape(g) {
     g.clear()
     g.fillStyle(0x89b4fa, 1)
-    g.fillRect(-8, -20, 16, 20)
+    g.fillCircle(0, -13, 10)
+    g.fillStyle(0xcdd6f4, 1)
+    g.fillCircle(0, -27, 7)
+    g.fillStyle(0x1e1e2e, 1)
+    g.fillCircle(-3, -27, 1.5)
+    g.fillCircle(3, -27, 1.5)
+    g.fillStyle(0xffffff, 0.45)
+    g.fillCircle(-2, -31, 2)
   }
 
   get passiveEffect() {
@@ -40,7 +53,6 @@ export class Player {
     if (cursors.up.isDown    || keys.w.isDown) dy -= speed
     if (cursors.down.isDown  || keys.s.isDown) dy += speed
 
-    // Diagonal normalisation
     if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707 }
 
     const nx = this.tx + dx
@@ -51,28 +63,48 @@ export class Player {
     if (nx >= 0 && nx < cols && grid[Math.floor(this.ty)]?.[Math.floor(nx)] !== 2) this.tx = nx
     if (ny >= 0 && ny < rows && grid[Math.floor(ny)]?.[Math.floor(this.tx)] !== 2) this.ty = ny
 
-    // Jump
     if (Phaser.Input.Keyboard.JustDown(keys.space) && this.onGround) {
       const jv = this.passiveEffect.jumpVelocity ?? JUMP_VELOCITY
       this.vz = jv
       this.onGround = false
     }
 
-    // Gravity
     const grav = this.passiveEffect.gravity ?? GRAVITY
     if (!this.onGround) {
+      const prevTz = this.tz
       this.vz -= grav
       this.tz += this.vz
+
       if (this.tz <= 0) {
         this.tz = 0
         this.vz = 0
         this.onGround = true
+      } else if (this.vz < 0) {
+        const fx = Math.floor(this.tx)
+        const fy = Math.floor(this.ty)
+        for (const p of this._platforms) {
+          if (p.tx === fx && p.ty === fy && prevTz >= p.tz && this.tz < p.tz) {
+            this.tz = p.tz
+            this.vz = 0
+            this.onGround = true
+            break
+          }
+        }
       }
+    }
+
+    // Fall off platform edge
+    if (this.onGround && this.tz > 0.01) {
+      const fx = Math.floor(this.tx)
+      const fy = Math.floor(this.ty)
+      const still = this._platforms.some(p =>
+        p.tx === fx && p.ty === fy && Math.abs(p.tz - this.tz) < 0.05
+      )
+      if (!still) this.onGround = false
     }
 
     this._syncPosition()
 
-    // Fire discovery attempt callback on jump, dive, or move
     if (Phaser.Input.Keyboard.JustDown(keys.space) && wasOnGround) {
       this.onDiscoverAttempt?.({
         action: 'jump',
@@ -105,6 +137,8 @@ export class Player {
   _syncPosition() {
     const originX = this.scene.scale.width / 2
     const originY = 80
+    const ground = toScreen(this.tx, this.ty, 0, originX, originY)
+    this.shadowGfx.setPosition(ground.x, ground.y)
     const { x, y } = toScreen(this.tx, this.ty, this.tz, originX, originY)
     this.gfx.setPosition(x, y - TILE_H / 2)
   }
@@ -113,5 +147,8 @@ export class Player {
     return { x: this.tx, y: this.ty, z: this.tz, facing: this.facing }
   }
 
-  destroy() { this.gfx.destroy() }
+  destroy() {
+    this.shadowGfx.destroy()
+    this.gfx.destroy()
+  }
 }
