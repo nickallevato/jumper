@@ -31,9 +31,6 @@ Players gently bob/breathe when standing still. Cheap liveliness; reads as "aliv
 If a player drops below the floor (off a tall ledge in a follow-room), respawn at room spawn
 instead of falling forever. Safety net for vertical levels.
 
-### 21. Camera punch / shake on discovery — *Pillars 5 · Size S*
-A brief zoom-punch + shake when a discovery fires; juice that makes finds feel momentous.
-
 ### 22. Belltower checkpoints — *Pillars 6 · Size S*
 Respawn at the highest ledge reached so a missed jump doesn't drop you to the very bottom.
 Reduces frustration on vertical climbs.
@@ -63,6 +60,12 @@ Gentle vertical oscillation of book-stack platforms (tailored moving-platform va
 
 ### 30. Dungeon vignette — *Pillars 5 · Size S*
 A dark edge gradient overlay in dungeon rooms for mood/atmosphere; camera-fixed.
+
+### 31. Discovery ripple ring — *Pillars 5 · Size S*
+An expanding ring effect at the player's position when a secret fires; reinforces the moment.
+
+### 32. Parallax background layer — *Pillars 5 · Size M*
+A faint parallax starfield/pattern behind the world for depth; scrolls slower than the camera.
 
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
@@ -121,6 +124,8 @@ reveal now exist — this is unblocked.
   tile from the centered diamond; switched to `round` so the target sits where the platform looks.
 - ✓ The Sunken Library — dark dungeon (overworld portal 2,7); visible book-stacks climb partway,
   Lantern reveals the final shelves to the archive ledge → `secret_archivist`.
+- ✓ Camera punch on discovery — brief shake + soft green flash when a secret fires (pairs with
+  the discovery sound).
 
 ---
 

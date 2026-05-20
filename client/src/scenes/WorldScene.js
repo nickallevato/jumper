@@ -162,6 +162,7 @@ export class WorldScene extends Phaser.Scene {
       console.log('Discovery:', secretId, effect)
       this._showDiscoveryFlash(secretId)
       Sound.discover()
+      this._juiceDiscovery()
       if (this.profile) {
         const already = (this.profile.discoveredSecrets ?? []).includes(secretId)
         if (!already) {
@@ -505,6 +506,13 @@ export class WorldScene extends Phaser.Scene {
       duration: 320,
       ease: 'Back.easeOut',
     })
+  }
+
+  // A brief shake + soft green flash to make a discovery feel momentous.
+  _juiceDiscovery() {
+    const cam = this.cameras.main
+    cam.shake(160, 0.004)
+    cam.flash(220, 166, 227, 161)   // soft green (#a6e3a1)
   }
 
   // Camera-fixed banner near the top for world events (e.g. a bell tolling).
