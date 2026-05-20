@@ -64,6 +64,14 @@ const TRIGGERS = [
     itemName: null,
     effect:   { type: 'cosmetic', value: 'locksmith' },
   },
+  {
+    secretId: 'secret_illuminated',
+    roomId:   'dungeon_grove',
+    zone:     { x: [7, 7], y: [6, 6] },
+    action:   'move',
+    itemName: 'Lantern',
+    effect:   { type: 'cosmetic', value: 'illuminated' },
+  },
 ]
 
 function matchesTrigger(trigger, { action, roomId, wx, wy, itemName }) {

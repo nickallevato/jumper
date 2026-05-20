@@ -63,6 +63,12 @@ export class WorldScene extends Phaser.Scene {
     const spawn = room.spawn ?? { tx: 8, ty: 8 }
     this.player = new Player(this, spawn.tx, spawn.ty, this.profile, collisionPlatforms)
 
+    // Lantern-revealed hidden platforms: rendered + collidable only while holding a Lantern.
+    this._basePlatforms = collisionPlatforms
+    this._hidden = room.hidden ?? []
+    this._hiddenGfx = this._hidden.map(p => this._drawHidden(p, originX, originY))
+    this._applyReveal()
+
     // Brief grace so we don't instantly re-trigger the portal we just arrived through.
     this._portalLock = true
     this.time.delayedCall(500, () => { this._portalLock = false })
@@ -167,6 +173,7 @@ export class WorldScene extends Phaser.Scene {
     socket.on(E.ITEM_HELD, ({ item }) => {
       this._heldItem = item
       this.player.setHeldItem(item)
+      this._applyReveal()
     })
 
     socket.on(E.PUZZLE_STATE, ({ raised }) => {
@@ -275,6 +282,29 @@ export class WorldScene extends Phaser.Scene {
     g.fillPoints([
       { x, y: y - hh }, { x: x + hw, y }, { x, y: y + hh }, { x: x - hw, y },
     ], true)
+  }
+
+  // A hidden platform, drawn as a ghostly box (hidden until the Lantern reveals it).
+  _drawHidden(p, originX, originY) {
+    const g = this.add.graphics()
+    const { x, y } = toScreen(p.tx, p.ty, p.tz, originX, originY)
+    const hw = TILE_W / 2, hh = TILE_H / 2
+    const D = Math.max(10, p.tz * TILE_H + 10)
+    g.fillStyle(0x94e2d5, 0.32)
+    g.fillPoints([{ x: x - hw, y }, { x, y: y + hh }, { x, y: y + hh + D }, { x: x - hw, y: y + D }], true)
+    g.fillStyle(0x74c7ec, 0.32)
+    g.fillPoints([{ x, y: y + hh }, { x: x + hw, y }, { x: x + hw, y: y + D }, { x, y: y + hh + D }], true)
+    g.fillStyle(0xb9f2e6, 0.6)
+    g.fillPoints([{ x, y: y - hh }, { x: x + hw, y }, { x, y: y + hh }, { x: x - hw, y }], true)
+    g.setVisible(false)
+    return g
+  }
+
+  // Toggle hidden platforms (visible + collidable) based on whether a Lantern is held.
+  _applyReveal() {
+    const reveal = this.player.heldItem?.passive_effect === 'reveal_hidden'
+    for (const g of this._hiddenGfx ?? []) g.setVisible(reveal)
+    this.player.setPlatforms(reveal ? [...this._basePlatforms, ...this._hidden] : this._basePlatforms)
   }
 
   // Glowing portal markers — step onto one to travel to another room.

@@ -78,6 +78,13 @@ export const ROOMS = {
     bg: '#0c1422',
     portals: [{ tx: 2, ty: 2, to: 'overworld' }],
     doors: doorsForRoom('dungeon_grove'),
+    // Hidden stepping stones across the pool — only visible/solid while holding the Lantern.
+    hidden: [
+      { tx: 4, ty: 4, tz: 0.6 },
+      { tx: 5, ty: 5, tz: 1.0 },
+      { tx: 6, ty: 6, tz: 1.4 },
+      { tx: 7, ty: 6, tz: 1.8 },  // goal ledge → secret_illuminated
+    ],
   },
 }
 

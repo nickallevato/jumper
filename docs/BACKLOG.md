@@ -27,6 +27,14 @@ that complements emotes; reads off the tick player list.
 ### 14. Landing dust puff — *Pillars 5 · Size S*
 A small particle/graphic burst when the player lands, scaled by fall speed. Pure juice.
 
+### 15. Wind updraft column — *Pillars 1,2 · Size M*
+A vertical column that lifts airborne players upward (stronger while holding the Feather).
+Discoverable world element with item synergy; enables reaching otherwise-impossible heights.
+
+### 16. Moving patrol platform — *Pillars 2,5 · Size M*
+A platform that oscillates between two points (server-authoritative position). Ride it or time
+jumps onto it. Enriches dungeons and the future Belltower.
+
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
 original design ("unlocked by diving into a specific cracked floor tile"). Combines the dive verb
@@ -38,12 +46,10 @@ Hidden-order pressure plates; wrong order resets, right order opens a door. No U
 ### 6. Mirror relay puzzle (small room) — *Pillars 1,4 · Size L*
 Cooperative light-beam bounce between player-placed mirrors. Multiplayer-coordination puzzle.
 
-### 7. The Sunken Library (dungeon) — *Pillars 1,2 · Size L · depends on #1, #4*
-Dark dungeon, drifting book-stack platforms; Lantern reveals hidden shelves. Depends on dungeons
-+ Lantern reveal.
+### 7. The Sunken Library (dungeon) — *Pillars 1,2 · Size L*
+Dark dungeon, drifting book-stack platforms; Lantern reveals hidden shelves. Dungeons + Lantern
+reveal now exist — this is unblocked.
 
-### 8. Lantern reveal mechanic — *Pillars 1 · Size S · Gap ✓*
-Hidden tiles that only render when a player holding the Lantern is nearby. Enables #7.
 
 ---
 
@@ -68,6 +74,8 @@ Hidden tiles that only render when a player holding the Lantern is nearby. Enabl
 - ✓ Held-item state sync — server privately emits `item:held` (join/pickup/drop/key-use); fixes
   stale held indicator after pickup/drop, fixes door-open wrongly clearing others' items;
   foundational for the Lantern reveal mechanic.
+- ✓ Lantern reveal mechanic — hidden platforms (Grove) appear + become solid only while holding
+  the Lantern; stepping-stone path across the pool to `secret_illuminated`.
 
 ---
 

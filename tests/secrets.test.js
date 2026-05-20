@@ -77,6 +77,19 @@ describe('secrets', () => {
     expect(result.effect).toEqual({ type: 'cosmetic', value: 'counterweight' })
   })
 
+  it('records secret_illuminated only when moving at the hidden ledge holding a Lantern', () => {
+    const lanternId = db.prepare("SELECT id FROM items WHERE name = 'Lantern'").get().id
+    // Wrong item → no discovery
+    expect(checkDiscovery(db, playerId, {
+      action: 'move', roomId: 'dungeon_grove', wx: 7, wy: 6, wz: 0, itemId: null,
+    })).toBeNull()
+    // Lantern in hand at the ledge → discovery
+    const result = checkDiscovery(db, playerId, {
+      action: 'move', roomId: 'dungeon_grove', wx: 7, wy: 6, wz: 0, itemId: lanternId,
+    })
+    expect(result?.secretId).toBe('secret_illuminated')
+  })
+
   it('equips the unlocked cosmetic on a cosmetic-effect discovery', () => {
     checkDiscovery(db, playerId, {
       action: 'reach_counterweight', roomId: 'overworld', wx: 8, wy: 11, wz: 2, itemId: null,

@@ -110,6 +110,14 @@ Discoveries are private. Head-bounce pair detection runs in the server tick loop
 **Emotes:** press `F` to wave — shown locally and relayed (`emote`) to others in the same room
 as a brief bubble above the head. Lets strangers communicate without chat (chat is out of scope).
 
+### Lantern reveal (implemented — Grove)
+
+Hidden platforms (`room.hidden` in `maps.js`) are invisible and non-collidable until the local
+player holds a Lantern (`passive_effect: reveal_hidden`); held-item sync drives the toggle. In the
+Grove, a Lantern (from the vault) reveals stepping stones across the pool up to a ledge at (7,6);
+moving there with the Lantern records `secret_illuminated`. Reveal is a client render/collision
+concern; the discovery itself is still server-validated (zone + Lantern).
+
 ## 10. Cosmetics (implemented — `shared/cosmetics.js`)
 
 Unlocked through discovery, never bought or freely chosen. The shared catalog (single source of

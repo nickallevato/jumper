@@ -269,6 +269,11 @@ export class Player {
     this._updateIndicator()
   }
 
+  // Swap the set of platforms used for landing collision (e.g. revealing hidden ones).
+  setPlatforms(platforms) {
+    this._platforms = platforms
+  }
+
   // Transient emote bubble above the head (local + relayed to others).
   showEmote(type) {
     showEmoteAbove(this.scene, this.gfx, type)
