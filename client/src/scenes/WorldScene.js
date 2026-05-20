@@ -49,6 +49,7 @@ export class WorldScene extends Phaser.Scene {
   constructor() {
     super('WorldScene')
     this._pickupCooldown = 0
+    this._itemBobTime = 0
   }
 
   create(data) {
@@ -145,6 +146,8 @@ export class WorldScene extends Phaser.Scene {
       const g = this.add.graphics()
       g.fillStyle(0xfab387, 1)
       g.fillCircle(0, 0, 6)
+      g._baseX = x
+      g._baseY = y
       g.setPosition(x, y)
       this._worldItemGfx.set(item.worldItemId, g)
       g._worldItemId = item.worldItemId
@@ -178,6 +181,13 @@ export class WorldScene extends Phaser.Scene {
           break
         }
       }
+    }
+
+    // Animate world items bobbing
+    this._itemBobTime += delta
+    const bobOffset = Math.sin(this._itemBobTime * 0.003) * 5
+    for (const g of this._worldItemGfx.values()) {
+      g.setPosition(g._baseX, g._baseY + bobOffset)
     }
 
     // Interpolate remote players
