@@ -125,6 +125,10 @@ export class WorldScene extends Phaser.Scene {
       }
     })
 
+    socket.on(E.BOUNCE_HEAD, ({ vel }) => {
+      this.player.applyBounce(vel)
+    })
+
     // Q = drop held item
     this.input.keyboard.on('keydown-Q', () => {
       if (!this._heldItem) return
@@ -218,5 +222,6 @@ export class WorldScene extends Phaser.Scene {
     socket.off(E.TICK)
     socket.off(E.ITEM_STATE)
     socket.off(E.DISCOVER_OK)
+    socket.off(E.BOUNCE_HEAD)
   }
 }

@@ -26,14 +26,39 @@ const TRIGGERS = [
     itemName: null,
     effect:   { type: 'area_unlock', value: 'dungeon_deep' },
   },
+  // Movement techniques — position-independent (zone omitted).
+  {
+    secretId: 'secret_wall_kick',
+    roomId:   'overworld',
+    action:   'wall_kick',
+    itemName: null,
+    effect:   { type: 'cosmetic', value: 'wall_jumper' },
+  },
+  {
+    secretId: 'secret_head_bounce',
+    roomId:   'overworld',
+    action:   'head_bounce',
+    itemName: null,
+    effect:   { type: 'cosmetic', value: 'spring_step' },
+  },
+  {
+    secretId: 'secret_pogo',
+    roomId:   'overworld',
+    action:   'pogo',
+    itemName: null,
+    effect:   { type: 'cosmetic', value: 'pogo_master' },
+  },
 ]
 
 function matchesTrigger(trigger, { action, roomId, wx, wy, itemName }) {
+  const inZone = !trigger.zone || (
+    wx >= trigger.zone.x[0] && wx <= trigger.zone.x[1] &&
+    wy >= trigger.zone.y[0] && wy <= trigger.zone.y[1]
+  )
   return (
     trigger.roomId === roomId &&
     trigger.action === action &&
-    wx >= trigger.zone.x[0] && wx <= trigger.zone.x[1] &&
-    wy >= trigger.zone.y[0] && wy <= trigger.zone.y[1] &&
+    inZone &&
     (trigger.itemName === null || trigger.itemName === itemName)
   )
 }

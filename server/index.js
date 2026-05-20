@@ -9,7 +9,7 @@ import { getProfile } from './profile.js'
 import { attachRooms } from './rooms.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3002
 const isProd = process.env.NODE_ENV === 'production'
 
 const app = express()

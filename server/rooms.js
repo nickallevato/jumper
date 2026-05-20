@@ -2,7 +2,7 @@ import { getOrCreateProfile } from './auth.js'
 import { getProfile } from './profile.js'
 import { getWorldItems, pickupItem, dropItem, useItem } from './items.js'
 import { checkDiscovery } from './secrets.js'
-import { TICK_MS, ROOM_CAP_SMALL, SOCKET_EVENTS as E } from '../shared/constants.js'
+import { TICK_MS, ROOM_CAP_SMALL, BOUNCE_VEL, SOCKET_EVENTS as E } from '../shared/constants.js'
 
 const S = E
 
@@ -89,16 +89,56 @@ export function attachRooms(io, db) {
     })
   })
 
-  // 20 ticks/sec broadcast
+  // 20 ticks/sec broadcast + head-bounce detection
   setInterval(() => {
+    // Group raw player records by room (keeps socket + per-player state accessible)
     const byRoom = new Map()
     for (const [id, p] of players) {
       if (!p.roomId) continue
       if (!byRoom.has(p.roomId)) byRoom.set(p.roomId, [])
-      byRoom.get(p.roomId).push({ id, x: p.x, y: p.y, z: p.z, facing: p.facing, cosmeticId: p.cosmeticId })
+      byRoom.get(p.roomId).push([id, p])
     }
-    for (const [roomId, playerList] of byRoom) {
+
+    detectHeadBounces(io, db, byRoom)
+
+    for (const [roomId, list] of byRoom) {
+      const playerList = list.map(([id, p]) => ({
+        id, x: p.x, y: p.y, z: p.z, facing: p.facing, cosmeticId: p.cosmeticId,
+      }))
       io.to(roomId).emit(S.TICK, { players: playerList })
     }
+
+    // Remember z for next tick's falling check
+    for (const [, p] of players) p._prevZ = p.z
   }, TICK_MS)
+}
+
+// Mechanic 5: when a falling player passes through another's head, bounce them.
+function detectHeadBounces(io, db, byRoom) {
+  const now = Date.now()
+  for (const [roomId, list] of byRoom) {
+    for (let i = 0; i < list.length; i++) {
+      const [aId, a] = list[i]
+      const falling = a._prevZ !== undefined && a.z < a._prevZ - 0.001
+      if (!falling) continue
+      if (a._bounceCd && now < a._bounceCd) continue
+
+      for (let j = 0; j < list.length; j++) {
+        if (i === j) continue
+        const [, b] = list[j]
+        const dist = Math.hypot(a.x - b.x, a.y - b.y)
+        if (dist < 0.6 && a.z >= b.z && a.z <= b.z + 0.8) {
+          a.socket.emit(S.BOUNCE_HEAD, { vel: BOUNCE_VEL })
+          a._bounceCd = now + 600
+          const disc = checkDiscovery(db, aId, {
+            action: 'head_bounce', roomId,
+            wx: Math.floor(a.x), wy: Math.floor(a.y), wz: Math.floor(a.z),
+            itemId: null,
+          })
+          if (disc) a.socket.emit(S.DISCOVER_OK, disc)
+          break
+        }
+      }
+    }
+  }
 }

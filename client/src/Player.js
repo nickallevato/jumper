@@ -1,6 +1,12 @@
 import Phaser from 'phaser'
 import { toScreen } from './iso.js'
-import { TILE_H, MOVE_SPEED, JUMP_VELOCITY, GRAVITY, ITEM_EFFECTS } from '../../shared/constants.js'
+import {
+  TILE_H, MOVE_SPEED, GRAVITY, ITEM_EFFECTS,
+  MIN_JUMP_VEL, JUMP_HOLD_GRAV_FACTOR,
+  COYOTE_VEL, COYOTE_TIME_MS,
+  WALL_SLIDE_GRAV_FACTOR, WALL_KICK_SPEED, DOUBLE_TAP_MS, WALL_KICK_COOLDOWN_MS,
+  PERFECT_LANDING_MS, POGO_FACTOR,
+} from '../../shared/constants.js'
 
 export class Player {
   constructor(scene, tx, ty, profile, platforms = []) {
@@ -14,6 +20,20 @@ export class Player {
     this.heldItem  = profile?.heldItem ?? null
     this.facing    = 'se'
     this._platforms = platforms
+
+    // Movement-feel state
+    this._coyoteTimer    = 0      // ms of coyote grace remaining
+    this._isCoyoteJump   = false  // current airtime started from a coyote jump
+    this._isWallSliding  = false
+    this._wallDir        = { x: 0, y: 0 }  // unit vector pointing away from the wall
+    this._lastJumpTap    = -Infinity       // ms timestamp of last space press
+    this._wallKickCooldown = 0    // ms lockout before re-entering wall slide
+    this._landedAt       = -Infinity        // ms timestamp of last landing (for pogo)
+
+    // Squash & stretch
+    this._scaleX = 1; this._scaleY = 1
+    this._targetScaleX = 1; this._targetScaleY = 1
+    this._squashResetAt = 0
 
     const sg = scene.add.graphics()
     sg.fillStyle(0x000000, 0.28)
@@ -62,7 +82,27 @@ export class Player {
     g.fillCircle(0, 0, 3)
   }
 
+  // Target a squash/stretch pose; springs back to (1,1) after `ms`.
+  _squash(sx, sy, ms) {
+    this._targetScaleX = sx
+    this._targetScaleY = sy
+    this._squashResetAt = this.scene.time.now + ms
+  }
+
+  // Wall in the direction of input while airborne → unit vector away from wall, else null.
+  _detectWall(dx, dy, grid) {
+    const fx = Math.floor(this.tx)
+    const fy = Math.floor(this.ty)
+    if (dx > 0 && grid[fy]?.[Math.floor(this.tx + 0.7)] === 2) return { x: -1, y: 0 }
+    if (dx < 0 && grid[fy]?.[Math.floor(this.tx - 0.1)] === 2) return { x: 1, y: 0 }
+    if (dy > 0 && grid[Math.floor(this.ty + 0.7)]?.[fx] === 2) return { x: 0, y: -1 }
+    if (dy < 0 && grid[Math.floor(this.ty - 0.1)]?.[fx] === 2) return { x: 0, y: 1 }
+    return null
+  }
+
   update(dt, cursors, keys, grid) {
+    const now = this.scene.time.now
+    const ms  = dt * 1000
     const speed = MOVE_SPEED * dt
     let dx = 0, dy = 0
     const wasOnGround = this.onGround
@@ -82,13 +122,61 @@ export class Player {
     if (nx >= 0 && nx < cols && grid[Math.floor(this.ty)]?.[Math.floor(nx)] !== 2) this.tx = nx
     if (ny >= 0 && ny < rows && grid[Math.floor(ny)]?.[Math.floor(this.tx)] !== 2) this.ty = ny
 
-    if (Phaser.Input.Keyboard.JustDown(keys.space) && this.onGround) {
-      const jv = this.passiveEffect.jumpVelocity ?? JUMP_VELOCITY
-      this.vz = jv
-      this.onGround = false
+    // Decay timers
+    this._coyoteTimer = Math.max(0, this._coyoteTimer - ms)
+    this._wallKickCooldown = Math.max(0, this._wallKickCooldown - ms)
+
+    // Wall slide: airborne, pressing into a wall, not in post-kick lockout
+    const wall = (!this.onGround && this._wallKickCooldown === 0) ? this._detectWall(dx, dy, grid) : null
+    this._isWallSliding = wall !== null
+    if (wall) this._wallDir = wall
+
+    // --- Jump / kick / pogo on space press ---
+    let jumped = false
+    if (Phaser.Input.Keyboard.JustDown(keys.space)) {
+      const jv = this.passiveEffect.jumpVelocity ?? MIN_JUMP_VEL
+      if (this.onGround) {
+        // Pogo: a perfectly-timed tap right as you land boosts the jump (hidden technique)
+        if (now - this._landedAt < PERFECT_LANDING_MS) {
+          this.vz = jv * POGO_FACTOR
+          this._squash(0.8, 1.4, 90)
+          this.onDiscoverAttempt?.(this._action('pogo'))
+        } else {
+          this.vz = jv
+          this._squash(0.85, 1.3, 80)
+        }
+        this.onGround = false
+        this._isCoyoteJump = false
+        jumped = true
+      } else if (this._isWallSliding && (now - this._lastJumpTap < DOUBLE_TAP_MS)) {
+        // Wall kick — double tap while sliding
+        this.vz = MIN_JUMP_VEL * 1.1
+        this.tx = this._clampMove(this.tx + this._wallDir.x * WALL_KICK_SPEED, cols)
+        this.ty = this._clampMove(this.ty + this._wallDir.y * WALL_KICK_SPEED, rows)
+        this._isWallSliding = false
+        this._wallKickCooldown = WALL_KICK_COOLDOWN_MS
+        this._isCoyoteJump = false
+        this._squash(1.3, 0.85, 100)
+        this.onDiscoverAttempt?.(this._action('wall_kick'))
+      } else if (this._coyoteTimer > 0) {
+        // Coyote jump — fixed small arc, no hold bonus
+        this.vz = COYOTE_VEL
+        this.onGround = false
+        this._coyoteTimer = 0
+        this._isCoyoteJump = true
+        this._squash(0.85, 1.3, 80)
+      }
+      this._lastJumpTap = now
     }
 
-    const grav = this.passiveEffect.gravity ?? GRAVITY
+    // --- Gravity ---
+    let grav = this.passiveEffect.gravity ?? GRAVITY
+    if (this._isWallSliding) {
+      grav *= WALL_SLIDE_GRAV_FACTOR
+    } else if (keys.space.isDown && this.vz > 0 && !this._isCoyoteJump) {
+      grav *= JUMP_HOLD_GRAV_FACTOR   // variable height: hanging ascent while held
+    }
+
     if (!this.onGround) {
       const prevTz = this.tz
       this.vz -= grav
@@ -97,7 +185,7 @@ export class Player {
       if (this.tz <= 0) {
         this.tz = 0
         this.vz = 0
-        this.onGround = true
+        this._land(now)
       } else if (this.vz < 0) {
         const fx = Math.floor(this.tx)
         const fy = Math.floor(this.ty)
@@ -105,52 +193,67 @@ export class Player {
           if (p.tx === fx && p.ty === fy && prevTz >= p.tz && this.tz < p.tz) {
             this.tz = p.tz
             this.vz = 0
-            this.onGround = true
+            this._land(now)
             break
           }
         }
       }
     }
 
-    // Fall off platform edge
+    // Fall off platform edge → start coyote grace
     if (this.onGround && this.tz > 0.01) {
       const fx = Math.floor(this.tx)
       const fy = Math.floor(this.ty)
       const still = this._platforms.some(p =>
         p.tx === fx && p.ty === fy && Math.abs(p.tz - this.tz) < 0.05
       )
-      if (!still) this.onGround = false
+      if (!still) {
+        this.onGround = false
+        this._coyoteTimer = COYOTE_TIME_MS
+      }
     }
+
+    // Spring squash/stretch back toward neutral
+    if (now > this._squashResetAt) { this._targetScaleX = 1; this._targetScaleY = 1 }
+    this._scaleX += (this._targetScaleX - this._scaleX) * 0.25
+    this._scaleY += (this._targetScaleY - this._scaleY) * 0.25
 
     this._syncPosition()
 
-    if (Phaser.Input.Keyboard.JustDown(keys.space) && wasOnGround) {
-      this.onDiscoverAttempt?.({
-        action: 'jump',
-        wx: Math.floor(this.tx),
-        wy: Math.floor(this.ty),
-        wz: Math.floor(this.tz),
-        itemId: this.heldItem?.id ?? null,
-      })
+    // --- Discovery emits (existing) ---
+    if (jumped) this.onDiscoverAttempt?.(this._action('jump'))
+    if (cursors.down.isDown && !this.onGround) this.onDiscoverAttempt?.(this._action('dive'))
+    if (dx !== 0 || dy !== 0) this.onDiscoverAttempt?.(this._action('move', 0))
+  }
+
+  _action(action, wz) {
+    return {
+      action,
+      wx: Math.floor(this.tx),
+      wy: Math.floor(this.ty),
+      wz: wz ?? Math.floor(this.tz),
+      itemId: this.heldItem?.id ?? null,
     }
-    if (cursors.down.isDown && !this.onGround) {
-      this.onDiscoverAttempt?.({
-        action: 'dive',
-        wx: Math.floor(this.tx),
-        wy: Math.floor(this.ty),
-        wz: Math.floor(this.tz),
-        itemId: this.heldItem?.id ?? null,
-      })
-    }
-    if (dx !== 0 || dy !== 0) {
-      this.onDiscoverAttempt?.({
-        action: 'move',
-        wx: Math.floor(this.tx),
-        wy: Math.floor(this.ty),
-        wz: 0,
-        itemId: this.heldItem?.id ?? null,
-      })
-    }
+  }
+
+  _clampMove(v, max) {
+    return Math.max(0, Math.min(max - 0.01, v))
+  }
+
+  _land(now) {
+    this.onGround = true
+    this._isCoyoteJump = false
+    this._coyoteTimer = 0
+    this._landedAt = now
+    this._squash(1.4, 0.65, 70)
+  }
+
+  // Server-driven head bounce (Mechanic 5)
+  applyBounce(vel) {
+    this.vz = vel
+    this.onGround = false
+    this._isCoyoteJump = false
+    this._squash(0.85, 1.3, 90)
   }
 
   _syncPosition() {
@@ -159,7 +262,9 @@ export class Player {
     const ground = toScreen(this.tx, this.ty, 0, originX, originY)
     this.shadowGfx.setPosition(ground.x, ground.y)
     const { x, y } = toScreen(this.tx, this.ty, this.tz, originX, originY)
-    this.gfx.setPosition(x, y - TILE_H / 2)
+    const wallNudge = this._isWallSliding ? -this._wallDir.x * 2 : 0
+    this.gfx.setPosition(x + wallNudge, y - TILE_H / 2)
+    this.gfx.setScale(this._scaleX, this._scaleY)
     this.indicatorGfx.setPosition(this.gfx.x, this.gfx.y - 34)
   }
 

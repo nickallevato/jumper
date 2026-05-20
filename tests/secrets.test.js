@@ -45,4 +45,26 @@ describe('secrets', () => {
     const player = db.prepare('SELECT skill_level FROM players WHERE id = ?').get(playerId)
     expect(player.skill_level).toBe(1)
   })
+
+  // Movement techniques — position-independent triggers
+  it.each([
+    ['wall_kick',   'secret_wall_kick'],
+    ['head_bounce', 'secret_head_bounce'],
+    ['pogo',        'secret_pogo'],
+  ])('records %s anywhere in the overworld', (action, secretId) => {
+    const result = checkDiscovery(db, playerId, {
+      action, roomId: 'overworld', wx: 42, wy: 99, wz: 3, itemId: null,
+    })
+    expect(result).not.toBeNull()
+    expect(result.secretId).toBe(secretId)
+    const row = db.prepare('SELECT secret_id FROM discovered_secrets WHERE player_id = ? AND secret_id = ?').get(playerId, secretId)
+    expect(row.secret_id).toBe(secretId)
+  })
+
+  it('does not fire a technique trigger in the wrong room', () => {
+    const result = checkDiscovery(db, playerId, {
+      action: 'wall_kick', roomId: 'dungeon_sky', wx: 5, wy: 5, wz: 0, itemId: null,
+    })
+    expect(result).toBeNull()
+  })
 })
