@@ -8,6 +8,8 @@ const STYLES = {
   4: { top: 0x7aaa6a, left: 0x4a6e3c, right: 0x2e4824, depth: 10 }, // elevated platform
 }
 
+const WALL_HEIGHT = 1   // walls render one tile tall (rising above the floor)
+
 export class IsoMap {
   constructor(scene, grid, originX, originY, platforms = []) {
     this.scene = scene
@@ -28,7 +30,12 @@ export class IsoMap {
     for (let ty = 0; ty < this.grid.length; ty++) {
       for (let tx = 0; tx < this.grid[ty].length; tx++) {
         const type = this.grid[ty][tx]
-        if (type !== 0) all.push({ tx, ty, tz: 0, type })
+        if (type === 0) continue
+        // Walls render as raised blocks (top one tile up, body down to the ground) so they
+        // rise above the floor — drawing them at tz=0 made them sunken, so the player next
+        // to a wall looked half a tile too high. Ground/water stay flat at tz=0.
+        const tz = type === 2 ? WALL_HEIGHT : 0
+        all.push({ tx, ty, tz, type })
       }
     }
 
@@ -46,9 +53,9 @@ export class IsoMap {
       const style = STYLES[tile.type]
       if (!style) continue
       const { x, y } = toScreen(tile.tx, tile.ty, tile.tz, this.originX, this.originY)
-      // Raised tiles render as full-height pillars to the ground so their elevation
-      // is legible (and a player standing on top clearly reads as "up high").
-      const depth = tile.tz > 0 ? tile.tz * TILE_H + style.depth : style.depth
+      // Raised tiles (walls, platforms) draw their sides down to the ground so they read
+      // as solid blocks/pillars; flat tiles keep their thin lip.
+      const depth = tile.tz > 0 ? tile.tz * TILE_H + 10 : style.depth
       this._drawTile(g, x, y, style, depth)
     }
   }

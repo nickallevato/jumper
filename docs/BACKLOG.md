@@ -141,6 +141,9 @@ reveal now exist — this is unblocked.
   camera-follow enabled; loop grows one band/iteration alternating direction.
 - ✓ Wall clipping fix (player-reported) — wall collision used `floor`, letting players walk a
   half-tile into the visible wall; switched to `round` so walls block at their drawn edge.
+- ✓ Raised walls (player-reported) — walls drew at tz=0 with depth extending downward (sunken),
+  so a player next to a wall looked ~half a tile too high; walls now render as raised blocks
+  (top one tile up, body to the ground), consistent with platform pillars.
 
 ---
 
