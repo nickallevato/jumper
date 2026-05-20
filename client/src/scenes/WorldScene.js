@@ -424,8 +424,8 @@ export class WorldScene extends Phaser.Scene {
     if (this.riser) {
       this._drawRiser()
       if (this.player.onGround &&
-          Math.floor(this.player.tx) === this.riser.tx &&
-          Math.floor(this.player.ty) === this.riser.ty) {
+          Math.round(this.player.tx) === this.riser.tx &&
+          Math.round(this.player.ty) === this.riser.ty) {
         this.player.tz = this.riser.tz
       }
     }

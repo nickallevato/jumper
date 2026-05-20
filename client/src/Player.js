@@ -209,8 +209,10 @@ export class Player {
         this.vz = 0
         this._land(now)
       } else if (this.vz < 0) {
-        const fx = Math.floor(this.tx)
-        const fy = Math.floor(this.ty)
+        // Landing footprint is centered on the platform's tile (round, not floor) so it
+        // matches where the diamond is drawn — otherwise the target sits half a tile off.
+        const fx = Math.round(this.tx)
+        const fy = Math.round(this.ty)
         for (const p of this._platforms) {
           if (p.tx === fx && p.ty === fy && prevTz >= p.tz && this.tz < p.tz) {
             this.tz = p.tz
@@ -224,8 +226,8 @@ export class Player {
 
     // Fall off platform edge → start coyote grace
     if (this.onGround && this.tz > 0.01) {
-      const fx = Math.floor(this.tx)
-      const fy = Math.floor(this.ty)
+      const fx = Math.round(this.tx)
+      const fy = Math.round(this.ty)
       const still = this._platforms.some(p =>
         p.tx === fx && p.ty === fy && Math.abs(p.tz - this.tz) < 0.05
       )
@@ -324,8 +326,8 @@ export class Player {
   // grounded, else the highest platform at this tile with tz ≤ player tz, else ground (0).
   _shadowZ() {
     if (this.onGround) return this.tz
-    const fx = Math.floor(this.tx)
-    const fy = Math.floor(this.ty)
+    const fx = Math.round(this.tx)
+    const fy = Math.round(this.ty)
     let z = 0
     for (const p of this._platforms) {
       if (p.tx === fx && p.ty === fy && p.tz <= this.tz && p.tz > z) z = p.tz
