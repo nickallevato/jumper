@@ -78,6 +78,12 @@ export class WorldScene extends Phaser.Scene {
       color: '#a6e3a1', fontSize: '18px', fontStyle: 'bold',
     }).setScrollFactor(0).setDepth(1000)
 
+    // Room player-count HUD (top-right) — social awareness of who's here with you.
+    this._countHud = this.add.text(this.scale.width - 16, 12, '', {
+      color: '#89dceb', fontSize: '18px', fontStyle: 'bold',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(1000)
+    this._setRoomCount(1)
+
     this.cursors = this.input.keyboard.createCursorKeys()
     this.keys = this.input.keyboard.addKeys({
       w: Phaser.Input.Keyboard.KeyCodes.W,
@@ -110,6 +116,7 @@ export class WorldScene extends Phaser.Scene {
         this.remotePlayers.set(p.id, new RemotePlayer(this, p.id, p.x, p.y, p.z, p.cosmeticId))
       }
       this._renderWorldItems(worldItems)
+      this._setRoomCount(players.length)
       for (const d of openDoors ?? []) this._openDoor(d.tx, d.ty)
       // Snap the riser to whatever state the room is already in (no animation on join).
       if (this.riser) {
@@ -119,6 +126,7 @@ export class WorldScene extends Phaser.Scene {
     })
 
     socket.on(E.TICK, ({ players }) => {
+      this._setRoomCount(players.length)
       const seen = new Set()
       for (const p of players) {
         if (p.id === this.playerId) continue
@@ -415,6 +423,11 @@ export class WorldScene extends Phaser.Scene {
 
   _discoveryLabel() {
     return `✦ ${(this.profile?.discoveredSecrets ?? []).length}`
+  }
+
+  _setRoomCount(n) {
+    const count = Math.max(1, n | 0)
+    this._countHud?.setText(count === 1 ? 'here alone' : `${count} here`)
   }
 
   // Update the counter and pop it briefly to acknowledge a new find.

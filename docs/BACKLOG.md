@@ -20,10 +20,6 @@ First to ring the bell triggers a world event in the overworld. Depends on #1.
 ### 12. Synthesized sound effects — *Pillars 5 · Size M*
 WebAudio-generated blips for jump / land / discover / pickup — no asset files. Adds feel/juice.
 
-### 13. Room player-count HUD — *Pillars 4 · Size S*
-A small camera-fixed indicator of how many players are in your current room. Social awareness
-that complements emotes; reads off the tick player list.
-
 ### 14. Landing dust puff — *Pillars 5 · Size S*
 A small particle/graphic burst when the player lands, scaled by fall speed. Pure juice.
 
@@ -34,6 +30,14 @@ Discoverable world element with item synergy; enables reaching otherwise-impossi
 ### 16. Moving patrol platform — *Pillars 2,5 · Size M*
 A platform that oscillates between two points (server-authoritative position). Ride it or time
 jumps onto it. Enriches dungeons and the future Belltower.
+
+### 17. Camera-follow + vertical levels — *Pillars 6 · Size M · Gap ✓ (blocks #3, #7)*
+Smooth camera follow with world bounds, per-room opt-in (default off so existing small rooms are
+unchanged). The recurring blocker for tall/large rooms — needed before the Belltower or Sunken
+Library can render properly.
+
+### 18. Idle bob animation — *Pillars 5 · Size S*
+Players gently bob/breathe when standing still. Cheap liveliness; reads as "alive" not frozen.
 
 ### 10. Dive-portals (cracked floor tiles) — *Pillars 1,2 · Size M*
 Dive (down-while-airborne) onto a cracked floor tile to drop into a dungeon — canonical to the
@@ -76,6 +80,7 @@ reveal now exist — this is unblocked.
   foundational for the Lantern reveal mechanic.
 - ✓ Lantern reveal mechanic — hidden platforms (Grove) appear + become solid only while holding
   the Lantern; stepping-stone path across the pool to `secret_illuminated`.
+- ✓ Room player-count HUD — camera-fixed "N here" / "here alone", updated off the tick list.
 
 ---
 
