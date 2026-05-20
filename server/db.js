@@ -74,6 +74,7 @@ export function initDb(path = './jumper.db') {
     insert.run('wall_jumper',  'secret_wall_kick')
     insert.run('spring_step',  'secret_head_bounce')
     insert.run('pogo_master',  'secret_pogo')
+    insert.run('counterweight', 'secret_counterweight')
   }
 
   _db = db

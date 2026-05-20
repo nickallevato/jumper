@@ -4,7 +4,8 @@ import { Player } from '../Player.js'
 import { RemotePlayer } from '../RemotePlayer.js'
 import { getSocket } from '../net.js'
 import { toScreen } from '../iso.js'
-import { SOCKET_EVENTS as E, TILE_H } from '../../../shared/constants.js'
+import { SOCKET_EVENTS as E, TILE_H, TILE_W } from '../../../shared/constants.js'
+import { COUNTERWEIGHT } from '../../../shared/puzzles.js'
 
 // 2 = wall, 1 = ground
 const OVERWORLD_GRID = [
@@ -60,8 +61,20 @@ export class WorldScene extends Phaser.Scene {
     const originX = this.scale.width / 2
     const originY = 80
 
-    this.isoMap = new IsoMap(this, OVERWORLD_GRID, originX, originY, PLATFORMS)
-    this.player = new Player(this, 8, 8, this.profile, PLATFORMS)
+    // Counterweight puzzle geometry. The riser is mutable: its tz is the single source
+    // of truth for both its drawn height and player collision, so tweening it animates both.
+    const { riser, goal, plate } = COUNTERWEIGHT
+    this.riser = { tx: riser.tx, ty: riser.ty, tz: riser.loweredZ }
+    this._plate = plate
+    const goalPlatform = { tx: goal.tx, ty: goal.ty, tz: goal.tz }
+    const staticPlatforms = [...PLATFORMS, goalPlatform]
+    const collisionPlatforms = [...staticPlatforms, this.riser]
+
+    this.isoMap = new IsoMap(this, OVERWORLD_GRID, originX, originY, staticPlatforms)
+    this._drawPlate(originX, originY)
+    this._riserGfx = this.add.graphics()
+    this._drawRiser()
+    this.player = new Player(this, 8, 8, this.profile, collisionPlatforms)
 
     this.cursors = this.input.keyboard.createCursorKeys()
     this.keys = this.input.keyboard.addKeys({
@@ -89,12 +102,15 @@ export class WorldScene extends Phaser.Scene {
 
     socket.emit(E.JOIN_ROOM, { roomId: this.roomId })
 
-    socket.on(E.JOIN_OK, ({ players, worldItems }) => {
+    socket.on(E.JOIN_OK, ({ players, worldItems, puzzle }) => {
       for (const p of players) {
         if (p.id === this.playerId) continue
         this.remotePlayers.set(p.id, new RemotePlayer(this, p.id, p.x, p.y, p.z))
       }
       this._renderWorldItems(worldItems)
+      // Snap the riser to whatever state the room is already in (no animation on join).
+      this.riser.tz = puzzle?.raised ? COUNTERWEIGHT.riser.raisedZ : COUNTERWEIGHT.riser.loweredZ
+      this._drawRiser()
     })
 
     socket.on(E.TICK, ({ players }) => {
@@ -129,6 +145,17 @@ export class WorldScene extends Phaser.Scene {
       this.player.applyBounce(vel)
     })
 
+    socket.on(E.PUZZLE_STATE, ({ raised }) => {
+      const { loweredZ, raisedZ } = COUNTERWEIGHT.riser
+      this._riserTween?.stop()
+      this._riserTween = this.tweens.add({
+        targets: this.riser,
+        tz: raised ? raisedZ : loweredZ,
+        duration: 450,
+        ease: 'Sine.easeInOut',
+      })
+    })
+
     // Q = drop held item
     this.input.keyboard.on('keydown-Q', () => {
       if (!this._heldItem) return
@@ -136,6 +163,47 @@ export class WorldScene extends Phaser.Scene {
       this._socket.emit(E.ITEM_DROP, { x: state.x, y: state.y, z: state.z })
       this._heldItem = null
     })
+  }
+
+  // Bright sunken plate — visually invites stepping/dropping; pulses to read as interactive.
+  _drawPlate(originX, originY) {
+    const { x, y } = toScreen(this._plate.tx, this._plate.ty, 0, originX, originY)
+    const hw = TILE_W / 2, hh = TILE_H / 2
+    const g = this.add.graphics()
+    g.fillStyle(0xf9e2af, 1)
+    g.fillPoints([
+      { x: 0, y: -hh }, { x: hw, y: 0 }, { x: 0, y: hh }, { x: -hw, y: 0 },
+    ], true)
+    g.lineStyle(2, 0xdba90a, 1)
+    g.strokePoints([
+      { x: 0, y: -hh }, { x: hw, y: 0 }, { x: 0, y: hh }, { x: -hw, y: 0 },
+    ], true)
+    g.setPosition(x, y)
+    this.tweens.add({ targets: g, alpha: { from: 0.55, to: 1 }, duration: 900, yoyo: true, repeat: -1 })
+  }
+
+  // Redraw the riser pillar at its current tz (called every frame; tz may be mid-tween).
+  _drawRiser() {
+    const originX = this.scale.width / 2
+    const originY = 80
+    const g = this._riserGfx
+    g.clear()
+    const { x, y } = toScreen(this.riser.tx, this.riser.ty, this.riser.tz, originX, originY)
+    const hw = TILE_W / 2, hh = TILE_H / 2
+    const D = Math.max(10, this.riser.tz * TILE_H + 10)   // pillar side height grows with rise
+
+    g.fillStyle(0x8a6d3b, 1)   // left face
+    g.fillPoints([
+      { x: x - hw, y }, { x, y: y + hh }, { x, y: y + hh + D }, { x: x - hw, y: y + D },
+    ], true)
+    g.fillStyle(0x5e4827, 1)   // right face
+    g.fillPoints([
+      { x, y: y + hh }, { x: x + hw, y }, { x: x + hw, y: y + D }, { x, y: y + hh + D },
+    ], true)
+    g.fillStyle(0xc79a5b, 1)   // top
+    g.fillPoints([
+      { x, y: y - hh }, { x: x + hw, y }, { x, y: y + hh }, { x: x - hw, y },
+    ], true)
   }
 
   _renderWorldItems(worldItems) {
@@ -163,6 +231,14 @@ export class WorldScene extends Phaser.Scene {
   update(_time, delta) {
     const dt = delta / 1000
     this.player.update(dt, this.cursors, this.keys, OVERWORLD_GRID, PLATFORMS)
+
+    // Riser: redraw at its (possibly tweening) height, and carry a rider up/down with it.
+    this._drawRiser()
+    if (this.player.onGround &&
+        Math.floor(this.player.tx) === this.riser.tx &&
+        Math.floor(this.player.ty) === this.riser.ty) {
+      this.player.tz = this.riser.tz
+    }
 
     // Send position to server (only when changed)
     const state = this.player.getState()
@@ -223,5 +299,6 @@ export class WorldScene extends Phaser.Scene {
     socket.off(E.ITEM_STATE)
     socket.off(E.DISCOVER_OK)
     socket.off(E.BOUNCE_HEAD)
+    socket.off(E.PUZZLE_STATE)
   }
 }

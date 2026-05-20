@@ -41,4 +41,5 @@ export const SOCKET_EVENTS = {
   DISCOVER:      'discover',
   DISCOVER_OK:   'discover:ok',
   BOUNCE_HEAD:   'bounce:head',
+  PUZZLE_STATE:  'puzzle:state',
 }

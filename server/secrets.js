@@ -48,6 +48,14 @@ const TRIGGERS = [
     itemName: null,
     effect:   { type: 'cosmetic', value: 'pogo_master' },
   },
+  {
+    secretId: 'secret_counterweight',
+    roomId:   'overworld',
+    zone:     { x: [8, 8], y: [11, 11] },
+    action:   'reach_counterweight',
+    itemName: null,
+    effect:   { type: 'cosmetic', value: 'counterweight' },
+  },
 ]
 
 function matchesTrigger(trigger, { action, roomId, wx, wy, itemName }) {

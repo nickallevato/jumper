@@ -67,4 +67,13 @@ describe('secrets', () => {
     })
     expect(result).toBeNull()
   })
+
+  it('records secret_counterweight when the goal ledge is reached', () => {
+    const result = checkDiscovery(db, playerId, {
+      action: 'reach_counterweight', roomId: 'overworld', wx: 8, wy: 11, wz: 2, itemId: null,
+    })
+    expect(result).not.toBeNull()
+    expect(result.secretId).toBe('secret_counterweight')
+    expect(result.effect).toEqual({ type: 'cosmetic', value: 'counterweight' })
+  })
 })

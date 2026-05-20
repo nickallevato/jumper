@@ -54,6 +54,8 @@ Hidden tiles that only render when a player holding the Lantern is nearby. Enabl
 - ✓ Visual overhaul (3D tiles, blob characters, elevated platforms, shadows)
 - ✓ Bobbing world items · held-item indicator dot
 - ✓ Movement & feel: variable jump, squash/stretch, coyote, wall slide+kick, head bounce, pogo
+- ✓ The Counterweight puzzle — drop-item-as-weight (or coop player-weight) raises a platform
+  to reach a high goal ledge; new use of the drop verb. (`secret_counterweight`)
 
 ---
 

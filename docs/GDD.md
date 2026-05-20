@@ -80,7 +80,17 @@ World items bob.
 Server-side trigger = `(roomId, optional zone, action, optional item)`. On match: record secret,
 unlock area/cosmetic, recompute skill_level, emit private `discover:ok`. Trigger table is
 server-only. Current secrets: wall_crack (jump@zone), feather_wind (move+Feather@zone),
-deep_dive (dive@zone), wall_kick / head_bounce / pogo (technique, position-independent).
+deep_dive (dive@zone), wall_kick / head_bounce / pogo (technique, position-independent),
+counterweight (reach the puzzle goal ledge).
+
+### The Counterweight puzzle (implemented — `shared/puzzles.js`, server tick loop)
+
+A pressure **plate** at (11,12) linked to a **riser** platform at (8,12). Weighting the plate —
+by a player standing on it OR a dropped world item resting on it — raises the riser from z0→1.0
+(server-authoritative, broadcast via `puzzle:state`; client tweens it). The riser is the only way
+up to a **goal ledge** at (8,11, z2.0): unreachable from the ground (max jump ≈1.27) but reachable
+ground→riser→goal. Reaching it records `secret_counterweight`. Solo solution sacrifices your item
+on the plate; cooperative solution has one player weight the plate while another climbs.
 
 ## 9. Multiplayer Sync (implemented)
 

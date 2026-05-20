@@ -3,12 +3,15 @@ import { getProfile } from './profile.js'
 import { getWorldItems, pickupItem, dropItem, useItem } from './items.js'
 import { checkDiscovery } from './secrets.js'
 import { TICK_MS, ROOM_CAP_SMALL, BOUNCE_VEL, SOCKET_EVENTS as E } from '../shared/constants.js'
+import { COUNTERWEIGHT, isOnPlate, isAtGoal, PLATE_RADIUS } from '../shared/puzzles.js'
 
 const S = E
 
 export function attachRooms(io, db) {
   // playerId → { socket, roomId, x, y, z, facing, cosmeticId }
   const players = new Map()
+  // roomId → whether that room's counterweight plate is currently weighted
+  const puzzleRaised = new Map()
 
   io.on('connection', socket => {
     let playerId = null
@@ -47,6 +50,7 @@ export function attachRooms(io, db) {
       socket.emit(S.JOIN_OK, {
         players: roomPlayers,
         worldItems: getWorldItems(db, roomId),
+        puzzle: { raised: !!puzzleRaised.get(roomId) },
       })
     })
 
@@ -100,6 +104,7 @@ export function attachRooms(io, db) {
     }
 
     detectHeadBounces(io, db, byRoom)
+    evaluateCounterweight(io, db, byRoom, puzzleRaised)
 
     for (const [roomId, list] of byRoom) {
       const playerList = list.map(([id, p]) => ({
@@ -111,6 +116,39 @@ export function attachRooms(io, db) {
     // Remember z for next tick's falling check
     for (const [, p] of players) p._prevZ = p.z
   }, TICK_MS)
+}
+
+// The Counterweight puzzle: a weighted plate (player OR dropped item) raises a platform,
+// and reaching the high goal ledge records a discovery. All authority lives here.
+function evaluateCounterweight(io, db, byRoom, puzzleRaised) {
+  const { roomId, plate, goal } = COUNTERWEIGHT
+  const list = byRoom.get(roomId)
+  if (!list) return
+
+  // Weighted by any player standing on the plate (near ground level)...
+  let weighted = list.some(([, p]) => p.z < 0.6 && isOnPlate(p.x, p.y, plate))
+  // ...or by any dropped world item resting on it.
+  if (!weighted) {
+    weighted = getWorldItems(db, roomId).some(it =>
+      Math.hypot(it.wx - plate.tx, it.wy - plate.ty) < PLATE_RADIUS
+    )
+  }
+
+  if (weighted !== !!puzzleRaised.get(roomId)) {
+    puzzleRaised.set(roomId, weighted)
+    io.to(roomId).emit(S.PUZZLE_STATE, { raised: weighted })
+  }
+
+  // Reaching the goal ledge (only possible once the platform is up) records the secret.
+  for (const [id, p] of list) {
+    if (!isAtGoal(p.x, p.y, p.z, goal)) continue
+    // Proximity already confirmed; pass the canonical goal tile so the zone check is exact.
+    const disc = checkDiscovery(db, id, {
+      action: 'reach_counterweight', roomId,
+      wx: goal.tx, wy: goal.ty, wz: Math.floor(p.z), itemId: null,
+    })
+    if (disc) p.socket.emit(S.DISCOVER_OK, disc)
+  }
 }
 
 // Mechanic 5: when a falling player passes through another's head, bounce them.
