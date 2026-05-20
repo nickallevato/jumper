@@ -9,9 +9,26 @@
 
 ---
 
-## World Growth (recurring — every loop)
+## Idea Sketches
 
-The loop grows the overworld one band per iteration, alternating append directions.
+### Tandem Lift — co-op super-jump (#42)
+Two players stand on adjacent tiles and both hold jump. Instead of two small hops, a shared
+"charge" builds (a faint glow growing between them); when it peaks, one player is flung far
+higher than any solo move can reach — high enough to clear a ledge that's deliberately just out
+of solo range. It's discoverable with no hint: a curious pair experimenting with simultaneous
+jumps near each other will feel the charge catch and see the glow, and the world is seeded with
+"impossible" ledges that quietly teach players to seek a partner. It deepens the existing
+head-bounce into an intentional two-player verb (Pillar 4) built only from the jump button
+(Pillar 2), and the launch must be server-validated like head-bounce (Pillar 6). The reward for
+the launched player is a discovery + cosmetic, so cooperation literally becomes part of "what
+you've done" (Pillar 3) — and the lifter is incentivized to find someone to lift back.
+
+---
+
+## World Growth (PAUSED — loop is now brainstorming-only)
+
+The overworld is at 48x64; growth is paused while the loop focuses on idea generation.
+When resumed: the loop grows the overworld one band per iteration, alternating append directions.
 To grow: append the next direction to `OVERWORLD_GROWTH` in `client/src/maps.js`.
 - Applied so far: **east, south, east, south, east**
 - **Next direction: south** (note: cols now at 64 cap — next east will be a no-op)
@@ -86,6 +103,27 @@ something to navigate toward (grown areas are currently featureless).
 ### 40. Biome tinting per region — *Pillars 5 · Size M*
 Shift the ground palette gradually by distance from origin so parts of the growing world feel
 like distinct regions.
+
+### 41. Whisper stones (async no-chat marks) — *Pillars 1,4 · Size M*
+A player can leave a small mark from a fixed glyph set (no free text → respects no-chat) at a
+spot; later players find it. Async social presence + a way to point each other at secrets without
+words.
+
+### 42. Tandem lift (co-op super-jump) — *Pillars 2,4 · Size M*
+Two players on adjacent tiles both hold jump to "charge", then one launches far higher than any
+solo move. Extends head-bounce into a deliberate two-player verb; unlocks routes neither can reach alone.
+
+### 43. Echo of the bell (world reveal pulse) — *Pillars 1,4 · Size S*
+Ringing the Belltower bell briefly reveals hidden (Lantern) tiles for everyone, everywhere, for a
+few seconds — turning one player's climb into a fleeting world-wide opportunity window.
+
+### 44. Footprint glyphs (movement-as-input) — *Pillars 1,2 · Size M*
+Walking a specific shape/path over certain ground (no marked hint) triggers a secret. Movement
+itself becomes a hidden input language — pure discovery.
+
+### 45. Low-gravity zones — *Pillars 1,2 · Size M*
+Tiles/regions where jump gravity is reduced (discoverable by feel); stack with the Feather for
+huge floaty arcs. Enables otherwise-impossible routes; a world element that reshapes the core verb.
 
 ### 37. Minimap for the growing world — *Pillars 6 · Size M*
 A small camera-fixed overview of the overworld bounds + your position + portal locations.
