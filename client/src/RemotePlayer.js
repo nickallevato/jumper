@@ -25,6 +25,10 @@ export class RemotePlayer {
     const g = scene.add.graphics()
     this._drawShape(g)
     this.gfx = g
+
+    const ig = scene.add.graphics()
+    this.indicatorGfx = ig
+
     this._syncPosition()
   }
 
@@ -60,10 +64,12 @@ export class RemotePlayer {
     this.shadowGfx.setPosition(ground.x, ground.y)
     const { x, y } = toScreen(this.tx, this.ty, this.tz, originX, originY)
     this.gfx.setPosition(x, y - TILE_H / 2)
+    this.indicatorGfx.setPosition(this.gfx.x, this.gfx.y - 34)
   }
 
   destroy() {
     this.shadowGfx.destroy()
     this.gfx.destroy()
+    this.indicatorGfx.destroy()
   }
 }

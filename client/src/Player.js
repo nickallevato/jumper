@@ -23,6 +23,11 @@ export class Player {
     const g = scene.add.graphics()
     this._drawShape(g)
     this.gfx = g
+
+    const ig = scene.add.graphics()
+    this.indicatorGfx = ig
+
+    this._updateIndicator()
   }
 
   _drawShape(g) {
@@ -41,6 +46,20 @@ export class Player {
   get passiveEffect() {
     if (!this.heldItem) return {}
     return ITEM_EFFECTS[this.heldItem.passive_effect] ?? {}
+  }
+
+  _updateIndicator() {
+    const g = this.indicatorGfx
+    g.clear()
+    if (!this.heldItem) return
+    const COLORS = {
+      floaty_jump:   0xa6e3a1,
+      high_jump:     0xf9e2af,
+      reveal_hidden: 0xcba6f7,
+    }
+    const color = COLORS[this.heldItem.passive_effect] ?? 0xfab387
+    g.fillStyle(color, 1)
+    g.fillCircle(0, 0, 3)
   }
 
   update(dt, cursors, keys, grid) {
@@ -141,6 +160,7 @@ export class Player {
     this.shadowGfx.setPosition(ground.x, ground.y)
     const { x, y } = toScreen(this.tx, this.ty, this.tz, originX, originY)
     this.gfx.setPosition(x, y - TILE_H / 2)
+    this.indicatorGfx.setPosition(this.gfx.x, this.gfx.y - 34)
   }
 
   getState() {
@@ -150,5 +170,6 @@ export class Player {
   destroy() {
     this.shadowGfx.destroy()
     this.gfx.destroy()
+    this.indicatorGfx.destroy()
   }
 }
