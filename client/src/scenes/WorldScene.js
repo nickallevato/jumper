@@ -6,45 +6,7 @@ import { getSocket } from '../net.js'
 import { toScreen } from '../iso.js'
 import { SOCKET_EVENTS as E, TILE_H, TILE_W } from '../../../shared/constants.js'
 import { COUNTERWEIGHT } from '../../../shared/puzzles.js'
-
-// 2 = wall, 1 = ground
-const OVERWORLD_GRID = [
-  [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
-  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
-  [2,1,1,2,2,1,1,1,1,1,1,2,2,1,1,2],
-  [2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,2],
-  [2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,2],
-  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
-  [2,1,1,1,1,2,2,1,1,2,2,1,1,1,1,2],
-  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
-  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
-  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
-  [2,1,1,1,1,1,1,1,1,1,1,2,2,1,1,2],
-  [2,1,1,2,2,1,1,1,1,1,1,2,1,1,1,2],
-  [2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,2],
-  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
-  [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
-  [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
-]
-
-// Elevated platforms — players can jump onto these
-const PLATFORMS = [
-  // Center-north pair (over the secret trigger zone x:5-8, y:5-8)
-  { tx: 7, ty: 5, tz: 1 },
-  { tx: 8, ty: 5, tz: 1 },
-  // Extra step above
-  { tx: 7, ty: 4, tz: 1.5 },
-  // Center-south pair (symmetric landmark)
-  { tx: 7, ty: 9, tz: 1 },
-  { tx: 8, ty: 9, tz: 1 },
-  // Top-right raised area (feather_wind secret zone x:10-13, y:3-6)
-  { tx: 12, ty: 3, tz: 1 },
-  { tx: 13, ty: 3, tz: 1 },
-  { tx: 12, ty: 4, tz: 1 },
-  // Bottom-left step (deep_dive secret zone x:0-3, y:10-13)
-  { tx: 2, ty: 11, tz: 0.75 },
-  { tx: 2, ty: 12, tz: 0.75 },
-]
+import { getRoom } from '../maps.js'
 
 export class WorldScene extends Phaser.Scene {
   constructor() {
@@ -58,23 +20,46 @@ export class WorldScene extends Phaser.Scene {
     this.profile  = data?.profile
     this.roomId   = data?.roomId ?? 'overworld'
 
+    // Detach socket handlers when this scene instance stops (e.g. on room transition),
+    // so a restart doesn't stack duplicate listeners on the shared socket.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this)
+
+    const room = getRoom(this.roomId)
+    this.grid = room.grid
+    this.platforms = room.platforms
+    this.portals = room.portals ?? []
+    this.cameras.main.setBackgroundColor(room.bg ?? '#1a1a2e')
+    this.cameras.main.fadeIn(180, 0, 0, 0)
+    this._transitioning = false
+
     const originX = this.scale.width / 2
     const originY = 80
 
-    // Counterweight puzzle geometry. The riser is mutable: its tz is the single source
-    // of truth for both its drawn height and player collision, so tweening it animates both.
-    const { riser, goal, plate } = COUNTERWEIGHT
-    this.riser = { tx: riser.tx, ty: riser.ty, tz: riser.loweredZ }
-    this._plate = plate
-    const goalPlatform = { tx: goal.tx, ty: goal.ty, tz: goal.tz }
-    const staticPlatforms = [...PLATFORMS, goalPlatform]
-    const collisionPlatforms = [...staticPlatforms, this.riser]
+    // Counterweight puzzle lives only in the overworld. The riser is mutable: its tz is
+    // the single source of truth for both its drawn height and player collision.
+    let staticPlatforms = [...this.platforms]
+    this.riser = null
+    if (this.roomId === 'overworld') {
+      const { riser, goal, plate } = COUNTERWEIGHT
+      this.riser = { tx: riser.tx, ty: riser.ty, tz: riser.loweredZ }
+      this._plate = plate
+      staticPlatforms = [...staticPlatforms, { tx: goal.tx, ty: goal.ty, tz: goal.tz }]
+    }
+    const collisionPlatforms = this.riser ? [...staticPlatforms, this.riser] : staticPlatforms
 
-    this.isoMap = new IsoMap(this, OVERWORLD_GRID, originX, originY, staticPlatforms)
-    this._drawPlate(originX, originY)
-    this._riserGfx = this.add.graphics()
-    this._drawRiser()
-    this.player = new Player(this, 8, 8, this.profile, collisionPlatforms)
+    this.isoMap = new IsoMap(this, this.grid, originX, originY, staticPlatforms)
+    this._drawPortals(originX, originY)
+    if (this.riser) {
+      this._drawPlate(originX, originY)
+      this._riserGfx = this.add.graphics()
+      this._drawRiser()
+    }
+    const spawn = room.spawn ?? { tx: 8, ty: 8 }
+    this.player = new Player(this, spawn.tx, spawn.ty, this.profile, collisionPlatforms)
+
+    // Brief grace so we don't instantly re-trigger the portal we just arrived through.
+    this._portalLock = true
+    this.time.delayedCall(500, () => { this._portalLock = false })
 
     this.cursors = this.input.keyboard.createCursorKeys()
     this.keys = this.input.keyboard.addKeys({
@@ -109,8 +94,10 @@ export class WorldScene extends Phaser.Scene {
       }
       this._renderWorldItems(worldItems)
       // Snap the riser to whatever state the room is already in (no animation on join).
-      this.riser.tz = puzzle?.raised ? COUNTERWEIGHT.riser.raisedZ : COUNTERWEIGHT.riser.loweredZ
-      this._drawRiser()
+      if (this.riser) {
+        this.riser.tz = puzzle?.raised ? COUNTERWEIGHT.riser.raisedZ : COUNTERWEIGHT.riser.loweredZ
+        this._drawRiser()
+      }
     })
 
     socket.on(E.TICK, ({ players }) => {
@@ -146,6 +133,7 @@ export class WorldScene extends Phaser.Scene {
     })
 
     socket.on(E.PUZZLE_STATE, ({ raised }) => {
+      if (!this.riser) return
       const { loweredZ, raisedZ } = COUNTERWEIGHT.riser
       this._riserTween?.stop()
       this._riserTween = this.tweens.add({
@@ -206,6 +194,31 @@ export class WorldScene extends Phaser.Scene {
     ], true)
   }
 
+  // Glowing portal markers — step onto one to travel to another room.
+  _drawPortals(originX, originY) {
+    const hw = TILE_W / 2, hh = TILE_H / 2
+    const diamond = [{ x: 0, y: -hh }, { x: hw, y: 0 }, { x: 0, y: hh }, { x: -hw, y: 0 }]
+    for (const portal of this.portals) {
+      const { x, y } = toScreen(portal.tx, portal.ty, 0, originX, originY)
+      const g = this.add.graphics()
+      g.fillStyle(0xcba6f7, 0.9)
+      g.fillPoints(diamond, true)
+      g.lineStyle(2, 0xf5c2e7, 1)
+      g.strokePoints(diamond, true)
+      g.setPosition(x, y)
+      this.tweens.add({ targets: g, alpha: { from: 0.4, to: 1 }, duration: 700, yoyo: true, repeat: -1 })
+    }
+  }
+
+  _enterPortal(to) {
+    if (this._transitioning) return
+    this._transitioning = true
+    this.cameras.main.fadeOut(180, 0, 0, 0)
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.restart({ playerId: this.playerId, profile: this.profile, roomId: to })
+    })
+  }
+
   _renderWorldItems(worldItems) {
     for (const g of this._worldItemGfx.values()) g.destroy()
     this._worldItemGfx.clear()
@@ -230,14 +243,27 @@ export class WorldScene extends Phaser.Scene {
 
   update(_time, delta) {
     const dt = delta / 1000
-    this.player.update(dt, this.cursors, this.keys, OVERWORLD_GRID, PLATFORMS)
+    if (this._transitioning) return
+    this.player.update(dt, this.cursors, this.keys, this.grid, this.platforms)
 
     // Riser: redraw at its (possibly tweening) height, and carry a rider up/down with it.
-    this._drawRiser()
-    if (this.player.onGround &&
-        Math.floor(this.player.tx) === this.riser.tx &&
-        Math.floor(this.player.ty) === this.riser.ty) {
-      this.player.tz = this.riser.tz
+    if (this.riser) {
+      this._drawRiser()
+      if (this.player.onGround &&
+          Math.floor(this.player.tx) === this.riser.tx &&
+          Math.floor(this.player.ty) === this.riser.ty) {
+        this.player.tz = this.riser.tz
+      }
+    }
+
+    // Portal travel: step onto a portal tile to change rooms.
+    if (!this._portalLock) {
+      for (const portal of this.portals) {
+        if (Math.abs(this.player.tx - portal.tx) < 0.6 && Math.abs(this.player.ty - portal.ty) < 0.6) {
+          this._enterPortal(portal.to)
+          break
+        }
+      }
     }
 
     // Send position to server (only when changed)

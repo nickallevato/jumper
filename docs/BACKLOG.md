@@ -11,14 +11,6 @@
 
 ## Now (next iteration)
 
-### 1. Real dungeon rooms — *Pillars 1,6 · Size L · Gap ✓✓✓*
-Make the existing skill-gating actually load a distinct dungeon scene with its own grid, plus
-a portal in the overworld to enter and a way back out. Closes the single biggest gap and unblocks
-every dungeon idea below. Vertical slice: one stub dungeon grid, portal tile → `join:room`, scene
-swap, return portal.
-
-## Next
-
 ### 2. Cosmetic rendering — *Pillars 3 · Size M · Gap ✓✓*
 Render `cosmetic_id` as real palette/shape/accessory variants on the player + remote players.
 Makes "you are what you've done" actually visible. Currently unlocks are invisible.
@@ -56,6 +48,8 @@ Hidden tiles that only render when a player holding the Lantern is nearby. Enabl
 - ✓ Movement & feel: variable jump, squash/stretch, coyote, wall slide+kick, head bounce, pogo
 - ✓ The Counterweight puzzle — drop-item-as-weight (or coop player-weight) raises a platform
   to reach a high goal ledge; new use of the drop verb. (`secret_counterweight`)
+- ✓ Real dungeon rooms — room registry (`maps.js`), portal tiles, scene fade transitions,
+  `dungeon_grove` starter dungeon; puzzle scoped to overworld.
 
 ---
 

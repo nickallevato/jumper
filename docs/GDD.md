@@ -46,8 +46,11 @@ recomputed on discovery. Gates area access; not shown to the player.
 ## 5. World Structure
 
 - **Overworld** — single global room, 16×16 grid, no cap, all players by default. **(implemented)**
-- **Dungeons** — named rooms, skill-gated (`dungeon_sky` ≥1, `dungeon_deep` ≥2).
-  *Gating + join logic implemented; distinct dungeon scenes/grids and portal entry NOT yet built.*
+- **Dungeons** — named rooms with their own grids/platforms/spawn/bg, entered via **portal
+  tiles**. `dungeon_grove` (ungated starter: a sunken pool with stepping stones) is reachable
+  from the overworld portal at (13,13); return portal at grove (2,2). Skill-gated rooms
+  (`dungeon_sky` ≥1, `dungeon_deep` ≥2) still enforced server-side on join. Rooms defined in
+  `client/src/maps.js`; WorldScene renders whichever room it's started with and fades between them.
 - **Small rooms** — soft cap (`ROOM_CAP_SMALL=6`) enforced for `small_*` rooms. *No content yet.*
 
 The overworld has elevated platforms players can jump onto, and three secret trigger zones.
