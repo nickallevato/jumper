@@ -106,34 +106,72 @@ class GameScene extends Phaser.Scene {
     return { x: iso.x + this.originX, y: iso.y + this.originY };
   }
 
+  private client = new Client(SERVER_URL);
+  private reconnectionToken?: string;
+
   private async connect(): Promise<void> {
     try {
-      const client = new Client(SERVER_URL);
-      const room = await client.joinOrCreate<JumperRoomState>("jumper");
-      this.room = room;
-      this.statusText.setText(`Room: ${room.roomId}`);
-      console.log("[client] joined", room.roomId, room.sessionId);
-
-      const $ = getStateCallbacks(room);
-
-      $(room.state).players.onAdd((player: PlayerState, sessionId: string) => {
-        this.addPlayerView(sessionId, player, $);
-        this.updateCount();
-      });
-      $(room.state).players.onRemove((_p: PlayerState, sessionId: string) => {
-        this.removePlayerView(sessionId);
-        this.updateCount();
-      });
-
-      room.onLeave(() => {
-        this.statusText.setText("Disconnected — refresh to rejoin");
-        for (const id of [...this.playerViews.keys()]) this.removePlayerView(id);
-        this.playerCountText.setText("Players: 0");
-      });
+      const room = await this.client.joinOrCreate<JumperRoomState>("jumper");
+      this.attachRoom(room);
     } catch (err) {
       console.error("[client] connect failed", err);
       this.statusText.setText(`Connect failed: ${(err as Error).message}`);
     }
+  }
+
+  private attachRoom(room: Room<JumperRoomState>): void {
+    this.room = room;
+    this.reconnectionToken = room.reconnectionToken;
+    this.statusText.setText(`Room: ${room.roomId}`);
+    console.log("[client] joined", room.roomId, room.sessionId);
+
+    const $ = getStateCallbacks(room);
+    $(room.state).players.onAdd((player: PlayerState, sessionId: string) => {
+      this.addPlayerView(sessionId, player, $);
+      this.updateCount();
+    });
+    $(room.state).players.onRemove((_p: PlayerState, sessionId: string) => {
+      this.removePlayerView(sessionId);
+      this.updateCount();
+    });
+
+    room.onLeave((code) => {
+      // Codes 1000/1001 are consented closure — don't try to reconnect.
+      const consented = code === 1000 || code === 1001;
+      if (consented || !this.reconnectionToken) {
+        this.statusText.setText("Disconnected — refresh to rejoin");
+        for (const id of [...this.playerViews.keys()]) this.removePlayerView(id);
+        this.playerCountText.setText("Players: 0");
+        return;
+      }
+      this.statusText.setText("Disconnected — reconnecting…");
+      void this.attemptReconnect();
+    });
+  }
+
+  private async attemptReconnect(): Promise<void> {
+    const token = this.reconnectionToken;
+    if (!token) return;
+    const deadline = Date.now() + 30_000;
+    let attempt = 0;
+    while (Date.now() < deadline) {
+      attempt++;
+      try {
+        const room = await this.client.reconnect<JumperRoomState>(token);
+        console.log("[client] reconnected", room.roomId, room.sessionId);
+        this.statusText.setText(`Room: ${room.roomId} (reconnected)`);
+        // Clear stale views — onAdd will repopulate from the rejoined state.
+        for (const id of [...this.playerViews.keys()]) this.removePlayerView(id);
+        this.attachRoom(room);
+        return;
+      } catch (err) {
+        console.warn(`[client] reconnect attempt ${attempt} failed`, err);
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+    this.statusText.setText("Reconnect failed — refresh to rejoin");
+    for (const id of [...this.playerViews.keys()]) this.removePlayerView(id);
+    this.playerCountText.setText("Players: 0");
   }
 
   private addPlayerView(
