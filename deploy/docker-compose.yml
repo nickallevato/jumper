@@ -1,6 +1,6 @@
 services:
   server:
-    image: ${IMAGE_SERVER:-gitea.allevato.io/na/jumper-server:latest}
+    image: ${IMAGE_SERVER:-675911353984.dkr.ecr.us-west-2.amazonaws.com/jumper-server:latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -9,7 +9,7 @@ services:
       - app
 
   client:
-    image: ${IMAGE_CLIENT:-gitea.allevato.io/na/jumper-client:latest}
+    image: ${IMAGE_CLIENT:-675911353984.dkr.ecr.us-west-2.amazonaws.com/jumper-client:latest}
     restart: unless-stopped
     depends_on:
       - server

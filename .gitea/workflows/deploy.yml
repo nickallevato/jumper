@@ -131,8 +131,10 @@ jobs:
     env:
       CI_OUTPUT_FILE: /tmp/ci-output-${{ github.run_id }}-build-and-push.txt
       CI_OUTPUT_TAIL_FILE: /tmp/ci-output-${{ github.run_id }}-build-and-push.tail
-      REGISTRY: gitea.allevato.io
-      IMAGE_NS: na
+      REGISTRY: 675911353984.dkr.ecr.us-west-2.amazonaws.com
+      AWS_REGION: us-west-2
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
       - uses: actions/checkout@v4
       - name: Initialize CI log capture
@@ -141,22 +143,20 @@ jobs:
           rm -f "$CI_OUTPUT_FILE" "$CI_OUTPUT_TAIL_FILE"
           : > "$CI_OUTPUT_FILE"
 
-      - name: Login to Gitea container registry
+      - name: Login to ECR
         shell: bash
-        env:
-          REG_USER: ${{ secrets.GITEA_REGISTRY_USER }}
-          REG_PASS: ${{ secrets.GITEA_REGISTRY_TOKEN }}
         run: |
           set -o pipefail
-          echo "$REG_PASS" | docker login "$REGISTRY" -u "$REG_USER" --password-stdin 2>&1 | tee -a "$CI_OUTPUT_FILE"
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "$REGISTRY" 2>&1 | tee -a "$CI_OUTPUT_FILE"
 
       - name: Build server image
         shell: bash
         run: |
           set -o pipefail
           docker build -f server/Dockerfile \
-            -t "$REGISTRY/$IMAGE_NS/jumper-server:${{ github.sha }}" \
-            -t "$REGISTRY/$IMAGE_NS/jumper-server:latest" \
+            -t "$REGISTRY/jumper-server:${{ github.sha }}" \
+            -t "$REGISTRY/jumper-server:latest" \
             . 2>&1 | tee -a "$CI_OUTPUT_FILE"
 
       - name: Build client image
@@ -164,18 +164,18 @@ jobs:
         run: |
           set -o pipefail
           docker build -f client/Dockerfile \
-            -t "$REGISTRY/$IMAGE_NS/jumper-client:${{ github.sha }}" \
-            -t "$REGISTRY/$IMAGE_NS/jumper-client:latest" \
+            -t "$REGISTRY/jumper-client:${{ github.sha }}" \
+            -t "$REGISTRY/jumper-client:latest" \
             . 2>&1 | tee -a "$CI_OUTPUT_FILE"
 
       - name: Push images
         shell: bash
         run: |
           set -o pipefail
-          docker push "$REGISTRY/$IMAGE_NS/jumper-server:${{ github.sha }}" 2>&1 | tee -a "$CI_OUTPUT_FILE"
-          docker push "$REGISTRY/$IMAGE_NS/jumper-server:latest"          2>&1 | tee -a "$CI_OUTPUT_FILE"
-          docker push "$REGISTRY/$IMAGE_NS/jumper-client:${{ github.sha }}" 2>&1 | tee -a "$CI_OUTPUT_FILE"
-          docker push "$REGISTRY/$IMAGE_NS/jumper-client:latest"          2>&1 | tee -a "$CI_OUTPUT_FILE"
+          docker push "$REGISTRY/jumper-server:${{ github.sha }}" 2>&1 | tee -a "$CI_OUTPUT_FILE"
+          docker push "$REGISTRY/jumper-server:latest"            2>&1 | tee -a "$CI_OUTPUT_FILE"
+          docker push "$REGISTRY/jumper-client:${{ github.sha }}" 2>&1 | tee -a "$CI_OUTPUT_FILE"
+          docker push "$REGISTRY/jumper-client:latest"            2>&1 | tee -a "$CI_OUTPUT_FILE"
 
       - name: Notify Paperclip of build-and-push failure
         if: failure()
@@ -257,8 +257,8 @@ jobs:
     env:
       CI_OUTPUT_FILE: /tmp/ci-output-${{ github.run_id }}-deploy-aws.txt
       CI_OUTPUT_TAIL_FILE: /tmp/ci-output-${{ github.run_id }}-deploy-aws.tail
-      REGISTRY: gitea.allevato.io
-      IMAGE_NS: na
+      REGISTRY: 675911353984.dkr.ecr.us-west-2.amazonaws.com
+      AWS_REGION: us-west-2
       AWS_HOST: ${{ secrets.AWS_HOST_IP }}
       AWS_USER: ubuntu
     steps:
@@ -291,20 +291,21 @@ jobs:
       - name: Login + pull + up on AWS host
         shell: bash
         env:
-          REG_USER: ${{ secrets.GITEA_REGISTRY_USER }}
-          REG_PASS: ${{ secrets.GITEA_REGISTRY_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GH_SHA: ${{ github.sha }}
         run: |
           set -o pipefail
+          # Mint a short-lived ECR password on the runner; AWS host doesn't need aws CLI
+          ECR_PASS="$(aws ecr get-login-password --region "$AWS_REGION")"
           ssh -i ~/.ssh/jumper-deploy "$AWS_USER@$AWS_HOST" \
-            REGISTRY="$REGISTRY" REG_USER="$REG_USER" REG_PASS="$REG_PASS" \
-            IMAGE_NS="$IMAGE_NS" SHA="$GH_SHA" \
+            REGISTRY="$REGISTRY" ECR_PASS="$ECR_PASS" SHA="$GH_SHA" \
             bash -se <<'REMOTE' 2>&1 | tee -a "$CI_OUTPUT_FILE"
           set -eo pipefail
           cd /opt/jumper
-          echo "$REG_PASS" | docker login "$REGISTRY" -u "$REG_USER" --password-stdin
-          export IMAGE_SERVER="$REGISTRY/$IMAGE_NS/jumper-server:$SHA"
-          export IMAGE_CLIENT="$REGISTRY/$IMAGE_NS/jumper-client:$SHA"
+          echo "$ECR_PASS" | docker login --username AWS --password-stdin "$REGISTRY"
+          export IMAGE_SERVER="$REGISTRY/jumper-server:$SHA"
+          export IMAGE_CLIENT="$REGISTRY/jumper-client:$SHA"
           docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml pull
           docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml up -d
           docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml ps
