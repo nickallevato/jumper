@@ -1,0 +1,4 @@
+services:
+  client:
+    ports:
+      - "80:80"

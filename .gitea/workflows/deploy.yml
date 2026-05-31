@@ -1,0 +1,395 @@
+name: Build, push, and deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: jumper-deploy
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      CI_OUTPUT_FILE: /tmp/ci-output-${{ github.run_id }}-ci.txt
+      CI_OUTPUT_TAIL_FILE: /tmp/ci-output-${{ github.run_id }}-ci.tail
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CI log capture
+        shell: bash
+        run: |
+          rm -f "$CI_OUTPUT_FILE" "$CI_OUTPUT_TAIL_FILE"
+          : > "$CI_OUTPUT_FILE"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          set -o pipefail
+          corepack enable 2>&1 | tee -a "$CI_OUTPUT_FILE"
+          corepack prepare pnpm@10.33.0 --activate 2>&1 | tee -a "$CI_OUTPUT_FILE"
+
+      - name: Install
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm install --frozen-lockfile 2>&1 | tee -a "$CI_OUTPUT_FILE"
+
+      - name: Build shared
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter @jumper/shared build 2>&1 | tee -a "$CI_OUTPUT_FILE"
+
+      - name: Typecheck
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm typecheck 2>&1 | tee -a "$CI_OUTPUT_FILE"
+
+      - name: Notify Paperclip of ci failure
+        if: failure()
+        continue-on-error: true
+        env:
+          PAPERCLIP_API_KEY: ${{ secrets.PAPERCLIP_API_KEY }}
+          GH_SHA: ${{ github.sha }}
+          GH_REF_NAME: ${{ github.ref_name }}
+          GH_RUN_ID: ${{ github.run_id }}
+          GH_SERVER_URL: ${{ github.server_url }}
+          GH_REPOSITORY: ${{ github.repository }}
+          JOB_LABEL: ci
+          PAPERCLIP_PROJECT_ID: 463253dd-ddca-463f-b5bd-983fe3417068
+          PAPERCLIP_ASSIGNEE_ID: f66c8c6e-c761-4361-9735-e455cf6023c0
+          TITLE_PREFIX: "CI Failure"
+        shell: bash
+        run: |
+          set +e
+          API_KEY="$(printf '%s' "$PAPERCLIP_API_KEY" | tr -d '[:space:]')"
+          if [ -z "$API_KEY" ]; then
+            echo "PAPERCLIP_API_KEY not set; skipping failure notification"
+            exit 0
+          fi
+          SHORT_SHA="${GH_SHA:0:7}"
+          RUN_URL="${GH_SERVER_URL}/${GH_REPOSITORY}/actions/runs/${GH_RUN_ID}"
+          COMMIT_URL="${GH_SERVER_URL}/${GH_REPOSITORY}/commit/${GH_SHA}"
+          if [ -f "$CI_OUTPUT_FILE" ]; then
+            tail -n 80 "$CI_OUTPUT_FILE" | tail -c 4000 > "$CI_OUTPUT_TAIL_FILE"
+          else
+            echo "(no captured output found at $CI_OUTPUT_FILE)" > "$CI_OUTPUT_TAIL_FILE"
+          fi
+          export SHORT_SHA RUN_URL COMMIT_URL
+          export NOTIFY_TITLE="${TITLE_PREFIX}: ${JOB_LABEL} @ ${SHORT_SHA}"
+          PAYLOAD=$(python3 - <<'PY'
+          import json
+          import os
+
+          tail = ""
+          tail_path = os.environ.get("CI_OUTPUT_TAIL_FILE")
+          if tail_path and os.path.exists(tail_path):
+              with open(tail_path, encoding="utf-8", errors="replace") as log_file:
+                  tail = log_file.read()
+
+          description = (
+              f"Failed on `{os.environ['GH_REF_NAME']}` @ {os.environ['SHORT_SHA']} "
+              f"({os.environ['JOB_LABEL']})\n\n"
+              f"Run: {os.environ['RUN_URL']}\n"
+              f"Commit: {os.environ['COMMIT_URL']}\n\n"
+              f"--- last log lines ---\n\n```\n{tail}\n```"
+          )
+
+          print(json.dumps({
+              "title": os.environ["NOTIFY_TITLE"],
+              "status": "todo",
+              "priority": "critical",
+              "projectId": os.environ["PAPERCLIP_PROJECT_ID"],
+              "assigneeAgentId": os.environ["PAPERCLIP_ASSIGNEE_ID"],
+              "description": description,
+          }))
+          PY
+          ) || { echo "WARNING: payload build failed; skipping Paperclip notification"; exit 0; }
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://paperclip.allevato.io/api/companies/654aacab-8559-490a-8428-141bb9e860f0/issues" \
+            -H "Authorization: Bearer ${API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+          CURL_EXIT=$?
+          HTTP_BODY=$(echo "$HTTP_RESPONSE" | head -n -1)
+          HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n 1)
+          if [ "$CURL_EXIT" -ne 0 ] || [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ] 2>/dev/null; then
+            echo "WARNING: Failed to create Paperclip failure ticket (curl=$CURL_EXIT, http=$HTTP_CODE, body=$HTTP_BODY)"
+          else
+            echo "Paperclip failure ticket created: HTTP $HTTP_CODE"
+          fi
+          exit 0
+
+  build-and-push:
+    needs: ci
+    runs-on: ai2-daedalus
+    env:
+      CI_OUTPUT_FILE: /tmp/ci-output-${{ github.run_id }}-build-and-push.txt
+      CI_OUTPUT_TAIL_FILE: /tmp/ci-output-${{ github.run_id }}-build-and-push.tail
+      REGISTRY: gitea.allevato.io
+      IMAGE_NS: na
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CI log capture
+        shell: bash
+        run: |
+          rm -f "$CI_OUTPUT_FILE" "$CI_OUTPUT_TAIL_FILE"
+          : > "$CI_OUTPUT_FILE"
+
+      - name: Login to Gitea container registry
+        shell: bash
+        env:
+          REG_USER: ${{ secrets.GITEA_REGISTRY_USER }}
+          REG_PASS: ${{ secrets.GITEA_REGISTRY_TOKEN }}
+        run: |
+          set -o pipefail
+          echo "$REG_PASS" | docker login "$REGISTRY" -u "$REG_USER" --password-stdin 2>&1 | tee -a "$CI_OUTPUT_FILE"
+
+      - name: Build server image
+        shell: bash
+        run: |
+          set -o pipefail
+          docker build -f server/Dockerfile \
+            -t "$REGISTRY/$IMAGE_NS/jumper-server:${{ github.sha }}" \
+            -t "$REGISTRY/$IMAGE_NS/jumper-server:latest" \
+            . 2>&1 | tee -a "$CI_OUTPUT_FILE"
+
+      - name: Build client image
+        shell: bash
+        run: |
+          set -o pipefail
+          docker build -f client/Dockerfile \
+            -t "$REGISTRY/$IMAGE_NS/jumper-client:${{ github.sha }}" \
+            -t "$REGISTRY/$IMAGE_NS/jumper-client:latest" \
+            . 2>&1 | tee -a "$CI_OUTPUT_FILE"
+
+      - name: Push images
+        shell: bash
+        run: |
+          set -o pipefail
+          docker push "$REGISTRY/$IMAGE_NS/jumper-server:${{ github.sha }}" 2>&1 | tee -a "$CI_OUTPUT_FILE"
+          docker push "$REGISTRY/$IMAGE_NS/jumper-server:latest"          2>&1 | tee -a "$CI_OUTPUT_FILE"
+          docker push "$REGISTRY/$IMAGE_NS/jumper-client:${{ github.sha }}" 2>&1 | tee -a "$CI_OUTPUT_FILE"
+          docker push "$REGISTRY/$IMAGE_NS/jumper-client:latest"          2>&1 | tee -a "$CI_OUTPUT_FILE"
+
+      - name: Notify Paperclip of build-and-push failure
+        if: failure()
+        continue-on-error: true
+        env:
+          PAPERCLIP_API_KEY: ${{ secrets.PAPERCLIP_API_KEY }}
+          GH_SHA: ${{ github.sha }}
+          GH_REF_NAME: ${{ github.ref_name }}
+          GH_RUN_ID: ${{ github.run_id }}
+          GH_SERVER_URL: ${{ github.server_url }}
+          GH_REPOSITORY: ${{ github.repository }}
+          JOB_LABEL: build-and-push
+          PAPERCLIP_PROJECT_ID: 463253dd-ddca-463f-b5bd-983fe3417068
+          PAPERCLIP_ASSIGNEE_ID: f66c8c6e-c761-4361-9735-e455cf6023c0
+          TITLE_PREFIX: "Build Failure"
+        shell: bash
+        run: |
+          set +e
+          API_KEY="$(printf '%s' "$PAPERCLIP_API_KEY" | tr -d '[:space:]')"
+          if [ -z "$API_KEY" ]; then
+            echo "PAPERCLIP_API_KEY not set; skipping failure notification"
+            exit 0
+          fi
+          SHORT_SHA="${GH_SHA:0:7}"
+          RUN_URL="${GH_SERVER_URL}/${GH_REPOSITORY}/actions/runs/${GH_RUN_ID}"
+          COMMIT_URL="${GH_SERVER_URL}/${GH_REPOSITORY}/commit/${GH_SHA}"
+          if [ -f "$CI_OUTPUT_FILE" ]; then
+            tail -n 80 "$CI_OUTPUT_FILE" | tail -c 4000 > "$CI_OUTPUT_TAIL_FILE"
+          else
+            echo "(no captured output found at $CI_OUTPUT_FILE)" > "$CI_OUTPUT_TAIL_FILE"
+          fi
+          export SHORT_SHA RUN_URL COMMIT_URL
+          export NOTIFY_TITLE="${TITLE_PREFIX}: ${JOB_LABEL} @ ${SHORT_SHA}"
+          PAYLOAD=$(python3 - <<'PY'
+          import json
+          import os
+
+          tail = ""
+          tail_path = os.environ.get("CI_OUTPUT_TAIL_FILE")
+          if tail_path and os.path.exists(tail_path):
+              with open(tail_path, encoding="utf-8", errors="replace") as log_file:
+                  tail = log_file.read()
+
+          description = (
+              f"Failed on `{os.environ['GH_REF_NAME']}` @ {os.environ['SHORT_SHA']} "
+              f"({os.environ['JOB_LABEL']})\n\n"
+              f"Run: {os.environ['RUN_URL']}\n"
+              f"Commit: {os.environ['COMMIT_URL']}\n\n"
+              f"--- last log lines ---\n\n```\n{tail}\n```"
+          )
+
+          print(json.dumps({
+              "title": os.environ["NOTIFY_TITLE"],
+              "status": "todo",
+              "priority": "critical",
+              "projectId": os.environ["PAPERCLIP_PROJECT_ID"],
+              "assigneeAgentId": os.environ["PAPERCLIP_ASSIGNEE_ID"],
+              "description": description,
+          }))
+          PY
+          ) || { echo "WARNING: payload build failed; skipping Paperclip notification"; exit 0; }
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://paperclip.allevato.io/api/companies/654aacab-8559-490a-8428-141bb9e860f0/issues" \
+            -H "Authorization: Bearer ${API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+          CURL_EXIT=$?
+          HTTP_BODY=$(echo "$HTTP_RESPONSE" | head -n -1)
+          HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n 1)
+          if [ "$CURL_EXIT" -ne 0 ] || [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ] 2>/dev/null; then
+            echo "WARNING: Failed to create Paperclip failure ticket (curl=$CURL_EXIT, http=$HTTP_CODE, body=$HTTP_BODY)"
+          else
+            echo "Paperclip failure ticket created: HTTP $HTTP_CODE"
+          fi
+          exit 0
+
+  deploy-aws:
+    needs: build-and-push
+    runs-on: ai2-daedalus
+    env:
+      CI_OUTPUT_FILE: /tmp/ci-output-${{ github.run_id }}-deploy-aws.txt
+      CI_OUTPUT_TAIL_FILE: /tmp/ci-output-${{ github.run_id }}-deploy-aws.tail
+      REGISTRY: gitea.allevato.io
+      IMAGE_NS: na
+      AWS_HOST: ${{ secrets.AWS_HOST_IP }}
+      AWS_USER: ubuntu
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CI log capture
+        shell: bash
+        run: |
+          rm -f "$CI_OUTPUT_FILE" "$CI_OUTPUT_TAIL_FILE"
+          : > "$CI_OUTPUT_FILE"
+
+      - name: Configure SSH for AWS host
+        shell: bash
+        env:
+          AWS_SSH_KEY: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$AWS_SSH_KEY" > ~/.ssh/jumper-deploy
+          chmod 600 ~/.ssh/jumper-deploy
+          ssh-keyscan -H "$AWS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Ship compose files to AWS host
+        shell: bash
+        run: |
+          set -o pipefail
+          ssh -i ~/.ssh/jumper-deploy "$AWS_USER@$AWS_HOST" 'mkdir -p /opt/jumper' 2>&1 | tee -a "$CI_OUTPUT_FILE"
+          scp -i ~/.ssh/jumper-deploy deploy/docker-compose.yml deploy/docker-compose.aws.yml \
+            "$AWS_USER@$AWS_HOST:/opt/jumper/" 2>&1 | tee -a "$CI_OUTPUT_FILE"
+
+      - name: Login + pull + up on AWS host
+        shell: bash
+        env:
+          REG_USER: ${{ secrets.GITEA_REGISTRY_USER }}
+          REG_PASS: ${{ secrets.GITEA_REGISTRY_TOKEN }}
+          GH_SHA: ${{ github.sha }}
+        run: |
+          set -o pipefail
+          ssh -i ~/.ssh/jumper-deploy "$AWS_USER@$AWS_HOST" \
+            REGISTRY="$REGISTRY" REG_USER="$REG_USER" REG_PASS="$REG_PASS" \
+            IMAGE_NS="$IMAGE_NS" SHA="$GH_SHA" \
+            bash -se <<'REMOTE' 2>&1 | tee -a "$CI_OUTPUT_FILE"
+          set -eo pipefail
+          cd /opt/jumper
+          echo "$REG_PASS" | docker login "$REGISTRY" -u "$REG_USER" --password-stdin
+          export IMAGE_SERVER="$REGISTRY/$IMAGE_NS/jumper-server:$SHA"
+          export IMAGE_CLIENT="$REGISTRY/$IMAGE_NS/jumper-client:$SHA"
+          docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml pull
+          docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml up -d
+          docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml ps
+          REMOTE
+
+      - name: Smoke test public URL
+        shell: bash
+        run: |
+          set -o pipefail
+          sleep 8
+          curl -fsS "http://$AWS_HOST/" -o /tmp/smoke-index.html 2>&1 | tee -a "$CI_OUTPUT_FILE"
+          grep -q "<title>Jumper</title>" /tmp/smoke-index.html
+          curl -fsS "http://$AWS_HOST/matchmake/" 2>&1 | tee -a "$CI_OUTPUT_FILE"
+          echo "Smoke OK: http://$AWS_HOST/"
+
+      - name: Notify Paperclip of deploy-aws failure
+        if: failure()
+        continue-on-error: true
+        env:
+          PAPERCLIP_API_KEY: ${{ secrets.PAPERCLIP_API_KEY }}
+          GH_SHA: ${{ github.sha }}
+          GH_REF_NAME: ${{ github.ref_name }}
+          GH_RUN_ID: ${{ github.run_id }}
+          GH_SERVER_URL: ${{ github.server_url }}
+          GH_REPOSITORY: ${{ github.repository }}
+          JOB_LABEL: deploy-aws
+          PAPERCLIP_PROJECT_ID: 463253dd-ddca-463f-b5bd-983fe3417068
+          PAPERCLIP_ASSIGNEE_ID: f66c8c6e-c761-4361-9735-e455cf6023c0
+          TITLE_PREFIX: "Deploy Failure"
+        shell: bash
+        run: |
+          set +e
+          API_KEY="$(printf '%s' "$PAPERCLIP_API_KEY" | tr -d '[:space:]')"
+          if [ -z "$API_KEY" ]; then
+            echo "PAPERCLIP_API_KEY not set; skipping failure notification"
+            exit 0
+          fi
+          SHORT_SHA="${GH_SHA:0:7}"
+          RUN_URL="${GH_SERVER_URL}/${GH_REPOSITORY}/actions/runs/${GH_RUN_ID}"
+          COMMIT_URL="${GH_SERVER_URL}/${GH_REPOSITORY}/commit/${GH_SHA}"
+          if [ -f "$CI_OUTPUT_FILE" ]; then
+            tail -n 80 "$CI_OUTPUT_FILE" | tail -c 4000 > "$CI_OUTPUT_TAIL_FILE"
+          else
+            echo "(no captured output found at $CI_OUTPUT_FILE)" > "$CI_OUTPUT_TAIL_FILE"
+          fi
+          export SHORT_SHA RUN_URL COMMIT_URL
+          export NOTIFY_TITLE="${TITLE_PREFIX}: ${JOB_LABEL} @ ${SHORT_SHA}"
+          PAYLOAD=$(python3 - <<'PY'
+          import json
+          import os
+
+          tail = ""
+          tail_path = os.environ.get("CI_OUTPUT_TAIL_FILE")
+          if tail_path and os.path.exists(tail_path):
+              with open(tail_path, encoding="utf-8", errors="replace") as log_file:
+                  tail = log_file.read()
+
+          description = (
+              f"Failed on `{os.environ['GH_REF_NAME']}` @ {os.environ['SHORT_SHA']} "
+              f"({os.environ['JOB_LABEL']})\n\n"
+              f"Run: {os.environ['RUN_URL']}\n"
+              f"Commit: {os.environ['COMMIT_URL']}\n\n"
+              f"--- last log lines ---\n\n```\n{tail}\n```"
+          )
+
+          print(json.dumps({
+              "title": os.environ["NOTIFY_TITLE"],
+              "status": "todo",
+              "priority": "critical",
+              "projectId": os.environ["PAPERCLIP_PROJECT_ID"],
+              "assigneeAgentId": os.environ["PAPERCLIP_ASSIGNEE_ID"],
+              "description": description,
+          }))
+          PY
+          ) || { echo "WARNING: payload build failed; skipping Paperclip notification"; exit 0; }
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://paperclip.allevato.io/api/companies/654aacab-8559-490a-8428-141bb9e860f0/issues" \
+            -H "Authorization: Bearer ${API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+          CURL_EXIT=$?
+          HTTP_BODY=$(echo "$HTTP_RESPONSE" | head -n -1)
+          HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n 1)
+          if [ "$CURL_EXIT" -ne 0 ] || [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ] 2>/dev/null; then
+            echo "WARNING: Failed to create Paperclip failure ticket (curl=$CURL_EXIT, http=$HTTP_CODE, body=$HTTP_BODY)"
+          else
+            echo "Paperclip failure ticket created: HTTP $HTTP_CODE"
+          fi
+          exit 0

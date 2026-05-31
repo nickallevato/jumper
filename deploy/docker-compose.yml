@@ -1,0 +1,21 @@
+services:
+  server:
+    image: ${IMAGE_SERVER:-gitea.allevato.io/na/jumper-server:latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "2567"
+    networks:
+      - app
+
+  client:
+    image: ${IMAGE_CLIENT:-gitea.allevato.io/na/jumper-client:latest}
+    restart: unless-stopped
+    depends_on:
+      - server
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge
