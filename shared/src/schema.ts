@@ -27,7 +27,11 @@ defineTypes(PlayerState, {
 
 export class JumperRoomState extends Schema {
   players = new MapSchema<PlayerState>();
+  chainCount: number = 0;
+  chainLastAt: number = 0;
 }
 defineTypes(JumperRoomState, {
   players: { map: PlayerState },
+  chainCount: "number",
+  chainLastAt: "number",
 });
