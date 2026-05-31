@@ -7,21 +7,27 @@ const JUMP_VELOCITY = 14;
 const GRAVITY = -1.2;
 const JUMP_COOLDOWN_MS = 350;
 const WORLD_SIZE = 50;
+const RECONNECT_WINDOW_SEC_DEFAULT = 30;
+function reconnectWindowSec(): number {
+  const v = Number(process.env.JUMPER_RECONNECT_WINDOW_SEC);
+  return Number.isFinite(v) && v > 0 ? v : RECONNECT_WINDOW_SEC_DEFAULT;
+}
 const COLORS = [0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12, 0x9b59b6, 0x1abc9c, 0xe67e22, 0xe91e63];
 
 type Input = { left: boolean; right: boolean; up: boolean; down: boolean; jump: boolean };
 
 export class JumperRoom extends Room<JumperRoomState> {
   override maxClients = 32;
+  override autoDispose = true;
   private inputs = new Map<string, Input>();
   private pendingJump = new Set<string>();
+  private reconnecting = new Set<string>();
   private colorIndex = 0;
 
   override onCreate(): void {
     this.state = new JumperRoomState();
     this.setSimulationInterval((dt) => this.tick(dt), 1000 / TICK_RATE);
     this.onMessage("input", (client, input: Input) => {
-      // Latch jump: once set true, keep pending until tick consumes it
       const prev = this.inputs.get(client.sessionId);
       if (input.jump || prev?.jump) this.pendingJump.add(client.sessionId);
       this.inputs.set(client.sessionId, input);
@@ -30,6 +36,16 @@ export class JumperRoom extends Room<JumperRoomState> {
   }
 
   override onJoin(client: Client): void {
+    const existing = this.state.players.get(client.sessionId);
+    if (existing) {
+      console.log(`[JumperRoom] player rejoined: ${client.sessionId}`);
+      this.reconnecting.delete(client.sessionId);
+      if (!this.inputs.has(client.sessionId)) {
+        this.inputs.set(client.sessionId, { left: false, right: false, up: false, down: false, jump: false });
+      }
+      return;
+    }
+
     console.log(`[JumperRoom] player joined: ${client.sessionId}`);
     const player = new PlayerState();
     player.id = client.sessionId;
@@ -42,11 +58,35 @@ export class JumperRoom extends Room<JumperRoomState> {
     this.inputs.set(client.sessionId, { left: false, right: false, up: false, down: false, jump: false });
   }
 
-  override onLeave(client: Client): void {
-    console.log(`[JumperRoom] player left: ${client.sessionId}`);
-    this.state.players.delete(client.sessionId);
-    this.inputs.delete(client.sessionId);
+  override async onLeave(client: Client, consented?: boolean): Promise<void> {
+    // Clear inputs so the avatar stops moving while we wait for reconnect.
+    this.inputs.set(client.sessionId, { left: false, right: false, up: false, down: false, jump: false });
     this.pendingJump.delete(client.sessionId);
+
+    if (consented) {
+      console.log(`[JumperRoom] player left (consented): ${client.sessionId}`);
+      this.removePlayer(client.sessionId);
+      return;
+    }
+
+    console.log(`[JumperRoom] player disconnected, awaiting reconnect: ${client.sessionId}`);
+    this.reconnecting.add(client.sessionId);
+
+    try {
+      await this.allowReconnection(client, reconnectWindowSec());
+      console.log(`[JumperRoom] player reconnected: ${client.sessionId}`);
+      this.reconnecting.delete(client.sessionId);
+    } catch {
+      console.log(`[JumperRoom] reconnect window expired, dropping: ${client.sessionId}`);
+      this.reconnecting.delete(client.sessionId);
+      this.removePlayer(client.sessionId);
+    }
+  }
+
+  private removePlayer(sessionId: string): void {
+    this.state.players.delete(sessionId);
+    this.inputs.delete(sessionId);
+    this.pendingJump.delete(sessionId);
   }
 
   private tick(dt: number): void {
@@ -54,6 +94,10 @@ export class JumperRoom extends Room<JumperRoomState> {
     this.state.players.forEach((player, sessionId) => {
       const input = this.inputs.get(sessionId);
       if (!input) return;
+      if (this.reconnecting.has(sessionId)) {
+        // Freeze physics for disconnected players until reconnect or timeout.
+        return;
+      }
 
       let dx = 0, dy = 0;
       if (input.left) dx -= MOVE_SPEED * dtSec;
