@@ -127,7 +127,7 @@ jobs:
 
   build-and-push:
     needs: ci
-    runs-on: ai2-daedalus
+    runs-on: build
     env:
       CI_OUTPUT_FILE: /tmp/ci-output-${{ github.run_id }}-build-and-push.txt
       CI_OUTPUT_TAIL_FILE: /tmp/ci-output-${{ github.run_id }}-build-and-push.tail
@@ -253,7 +253,7 @@ jobs:
 
   deploy-aws:
     needs: build-and-push
-    runs-on: ai2-daedalus
+    runs-on: build
     env:
       CI_OUTPUT_FILE: /tmp/ci-output-${{ github.run_id }}-deploy-aws.txt
       CI_OUTPUT_TAIL_FILE: /tmp/ci-output-${{ github.run_id }}-deploy-aws.tail
