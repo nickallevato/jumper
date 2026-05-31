@@ -7,10 +7,42 @@
     <style>
       html, body { margin: 0; padding: 0; background: #111; color: #eee; font-family: sans-serif; }
       #game { display: block; margin: 0 auto; }
+      #name-overlay {
+        position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+        background: rgba(17, 17, 17, 0.9); z-index: 10;
+      }
+      #name-overlay form {
+        background: #222; padding: 24px 28px; border-radius: 8px; display: flex; flex-direction: column;
+        gap: 12px; min-width: 280px; box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+      }
+      #name-overlay label { font-size: 14px; color: #ccc; }
+      #name-overlay input {
+        font-size: 16px; padding: 8px 10px; border: 1px solid #444; background: #111; color: #eee;
+        border-radius: 4px; font-family: monospace;
+      }
+      #name-overlay button {
+        font-size: 14px; padding: 8px 12px; background: #4a90d9; color: #fff; border: 0;
+        border-radius: 4px; cursor: pointer;
+      }
+      #name-overlay button:hover { background: #5aa0e9; }
+      #name-edit {
+        position: fixed; top: 8px; right: 8px; z-index: 5; font-family: monospace; font-size: 12px;
+        background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #555; padding: 4px 8px;
+        border-radius: 4px; cursor: pointer;
+      }
+      #name-edit:hover { background: rgba(0,0,0,0.75); }
     </style>
   </head>
   <body>
     <div id="game"></div>
+    <button id="name-edit" type="button" hidden>edit name</button>
+    <div id="name-overlay" hidden>
+      <form id="name-form">
+        <label for="name-input">Your name (max 16 chars)</label>
+        <input id="name-input" type="text" maxlength="16" autocomplete="off" autofocus />
+        <button type="submit">Play</button>
+      </form>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
