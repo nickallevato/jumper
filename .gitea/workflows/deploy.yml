@@ -327,6 +327,16 @@ jobs:
             "http://$AWS_HOST/matchmake/joinOrCreate/jumper")
           echo "$MATCHMAKE" | tee -a "$CI_OUTPUT_FILE"
           echo "$MATCHMAKE" | grep -q '"roomId"'
+          # Real Colyseus 0.16 WS handshake on /{processId}/{roomId} — catches
+          # nginx proxy regressions where the upgrade falls through to the SPA.
+          WS_PATH=$(echo "$MATCHMAKE" | python3 -c 'import json,sys;d=json.load(sys.stdin);r=d["room"];print(r["processId"]+"/"+r["roomId"])')
+          WS_STATUS=$(curl -s -i --max-time 5 \
+            -H "Connection: Upgrade" -H "Upgrade: websocket" \
+            -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+            -H "Sec-WebSocket-Version: 13" \
+            "http://$AWS_HOST/$WS_PATH" | head -1 || true)
+          echo "WS handshake: $WS_STATUS" | tee -a "$CI_OUTPUT_FILE"
+          echo "$WS_STATUS" | grep -q "101" || { echo "WS upgrade did not return 101 on /$WS_PATH"; exit 1; }
           echo "Smoke OK: http://$AWS_HOST/"
 
       - name: Notify Paperclip of deploy-aws failure
