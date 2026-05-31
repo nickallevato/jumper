@@ -41,6 +41,9 @@ class GameScene extends Phaser.Scene {
   private lastInput: Input = { left: false, right: false, up: false, down: false, jump: false };
   private originX = 480;
   private originY = 160;
+  private cameraTarget!: Phaser.Math.Vector2;
+  private cameraFollow!: Phaser.GameObjects.Rectangle;
+  private edgeIndicators!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super("Game");
@@ -49,6 +52,9 @@ class GameScene extends Phaser.Scene {
   create(): void {
     this.drawBackground();
     this.drawTiles();
+    this.setupCamera();
+
+    this.edgeIndicators = this.add.graphics().setScrollFactor(0).setDepth(99);
 
     this.statusText = this.add.text(8, 8, "Connecting...", {
       fontFamily: "monospace", fontSize: "13px", color: "#ffffff",
@@ -107,6 +113,76 @@ class GameScene extends Phaser.Scene {
         ], true);
       }
     }
+  }
+
+  private setupCamera(): void {
+    // World screen bounds: iso x ∈ [-(N-1)*TILE_W/2, (N-1)*TILE_W/2], y ∈ [0, (2*(N-1))*TILE_H/2]
+    const N = WORLD_SIZE;
+    const minX = this.originX - (N - 1) * (TILE_W / 2) - TILE_W;
+    const maxX = this.originX + (N - 1) * (TILE_W / 2) + TILE_W;
+    const minY = this.originY - TILE_H;
+    const maxY = this.originY + (2 * (N - 1)) * (TILE_H / 2) + TILE_H * 2;
+    this.cameras.main.setBounds(minX, minY, maxX - minX, maxY - minY);
+
+    // Invisible follow target; we drive its position to the player centroid each frame.
+    const center = this.screenPos((N - 1) / 2, (N - 1) / 2, 0);
+    this.cameraTarget = new Phaser.Math.Vector2(center.x, center.y);
+    this.cameraFollow = this.add.rectangle(center.x, center.y, 1, 1, 0x000000, 0).setVisible(false);
+    // lerp 0.08 damps micro-movement without feeling sluggish.
+    this.cameras.main.startFollow(this.cameraFollow, false, 0.08, 0.08);
+    this.cameras.main.centerOn(center.x, center.y);
+  }
+
+  private updateCameraTarget(): void {
+    if (!this.room || this.room.state.players.size === 0) return;
+    let sx = 0, sy = 0, n = 0;
+    this.room.state.players.forEach((p) => {
+      const sp = this.screenPos(p.x, p.y, 0);
+      sx += sp.x; sy += sp.y; n++;
+    });
+    this.cameraTarget.set(sx / n, sy / n);
+    this.cameraFollow.setPosition(this.cameraTarget.x, this.cameraTarget.y);
+  }
+
+  private drawEdgeIndicators(): void {
+    this.edgeIndicators.clear();
+    if (!this.room) return;
+    const cam = this.cameras.main;
+    const selfId = this.room.sessionId;
+    const w = cam.width, h = cam.height;
+    const margin = 22;
+    const cx = w / 2, cy = h / 2;
+
+    this.room.state.players.forEach((p, sid) => {
+      if (sid === selfId) return;
+      const sp = this.screenPos(p.x, p.y, p.z);
+      const relX = sp.x - cam.scrollX;
+      const relY = sp.y - cam.scrollY;
+      const onScreen = relX >= margin && relX <= w - margin && relY >= margin && relY <= h - margin;
+      if (onScreen) return;
+
+      const dx = relX - cx;
+      const dy = relY - cy;
+      const absX = Math.max(Math.abs(dx), 0.0001);
+      const absY = Math.max(Math.abs(dy), 0.0001);
+      const t = Math.min((cx - margin) / absX, (cy - margin) / absY);
+      const ex = cx + dx * t;
+      const ey = cy + dy * t;
+      const ang = Math.atan2(dy, dx);
+
+      const size = 12;
+      const g = this.edgeIndicators;
+      g.fillStyle(p.color, 1);
+      g.lineStyle(2, 0x000000, 0.55);
+      const tipX = ex + Math.cos(ang) * size;
+      const tipY = ey + Math.sin(ang) * size;
+      const leftX = ex + Math.cos(ang + 2.5) * size;
+      const leftY = ey + Math.sin(ang + 2.5) * size;
+      const rightX = ex + Math.cos(ang - 2.5) * size;
+      const rightY = ey + Math.sin(ang - 2.5) * size;
+      g.fillTriangle(tipX, tipY, leftX, leftY, rightX, rightY);
+      g.strokeTriangle(tipX, tipY, leftX, leftY, rightX, rightY);
+    });
   }
 
   private screenPos(tx: number, ty: number, tz = 0): { x: number; y: number } {
@@ -239,6 +315,8 @@ class GameScene extends Phaser.Scene {
 
   override update(): void {
     if (!this.room) return;
+    this.updateCameraTarget();
+    this.drawEdgeIndicators();
     const input: Input = {
       left:  this.keys.left.isDown  || this.keys.a.isDown,
       right: this.keys.right.isDown || this.keys.d.isDown,
