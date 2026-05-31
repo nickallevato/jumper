@@ -143,6 +143,17 @@ jobs:
           rm -f "$CI_OUTPUT_FILE" "$CI_OUTPUT_TAIL_FILE"
           : > "$CI_OUTPUT_FILE"
 
+      - name: Install awscli
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! command -v aws >/dev/null 2>&1; then
+            (command -v apt-get >/dev/null && (apt-get update -qq && apt-get install -y -qq awscli)) \
+              || pip install --quiet awscli \
+              || pip3 install --quiet awscli
+          fi
+          aws --version 2>&1 | tee -a "$CI_OUTPUT_FILE"
+
       - name: Login to ECR
         shell: bash
         run: |
@@ -268,6 +279,17 @@ jobs:
         run: |
           rm -f "$CI_OUTPUT_FILE" "$CI_OUTPUT_TAIL_FILE"
           : > "$CI_OUTPUT_FILE"
+
+      - name: Install awscli
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! command -v aws >/dev/null 2>&1; then
+            (command -v apt-get >/dev/null && (apt-get update -qq && apt-get install -y -qq awscli)) \
+              || pip install --quiet awscli \
+              || pip3 install --quiet awscli
+          fi
+          aws --version 2>&1 | tee -a "$CI_OUTPUT_FILE"
 
       - name: Configure SSH for AWS host
         shell: bash
