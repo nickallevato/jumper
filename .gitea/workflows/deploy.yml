@@ -143,22 +143,13 @@ jobs:
           rm -f "$CI_OUTPUT_FILE" "$CI_OUTPUT_TAIL_FILE"
           : > "$CI_OUTPUT_FILE"
 
-      - name: Install awscli
-        shell: bash
-        run: |
-          set -o pipefail
-          if ! command -v aws >/dev/null 2>&1; then
-            (command -v apt-get >/dev/null && (apt-get update -qq && apt-get install -y -qq awscli)) \
-              || pip install --quiet awscli \
-              || pip3 install --quiet awscli
-          fi
-          aws --version 2>&1 | tee -a "$CI_OUTPUT_FILE"
-
       - name: Login to ECR
         shell: bash
         run: |
           set -o pipefail
-          aws ecr get-login-password --region "$AWS_REGION" \
+          docker run --rm \
+            -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_REGION \
+            amazon/aws-cli ecr get-login-password --region "$AWS_REGION" \
             | docker login --username AWS --password-stdin "$REGISTRY" 2>&1 | tee -a "$CI_OUTPUT_FILE"
 
       - name: Build server image
@@ -280,17 +271,6 @@ jobs:
           rm -f "$CI_OUTPUT_FILE" "$CI_OUTPUT_TAIL_FILE"
           : > "$CI_OUTPUT_FILE"
 
-      - name: Install awscli
-        shell: bash
-        run: |
-          set -o pipefail
-          if ! command -v aws >/dev/null 2>&1; then
-            (command -v apt-get >/dev/null && (apt-get update -qq && apt-get install -y -qq awscli)) \
-              || pip install --quiet awscli \
-              || pip3 install --quiet awscli
-          fi
-          aws --version 2>&1 | tee -a "$CI_OUTPUT_FILE"
-
       - name: Configure SSH for AWS host
         shell: bash
         env:
@@ -319,7 +299,9 @@ jobs:
         run: |
           set -o pipefail
           # Mint a short-lived ECR password on the runner; AWS host doesn't need aws CLI
-          ECR_PASS="$(aws ecr get-login-password --region "$AWS_REGION")"
+          ECR_PASS="$(docker run --rm \
+            -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_REGION \
+            amazon/aws-cli ecr get-login-password --region "$AWS_REGION")"
           ssh -i ~/.ssh/jumper-deploy "$AWS_USER@$AWS_HOST" \
             REGISTRY="$REGISTRY" ECR_PASS="$ECR_PASS" SHA="$GH_SHA" \
             bash -se <<'REMOTE' 2>&1 | tee -a "$CI_OUTPUT_FILE"
