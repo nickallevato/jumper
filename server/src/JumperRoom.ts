@@ -3,8 +3,12 @@ import { JumperRoomState, PlayerState } from "@jumper/shared";
 
 const TICK_RATE = 20;
 const MOVE_SPEED = 4;
-const JUMP_VELOCITY = 14;
-const GRAVITY = -1.2;
+// Jump physics are tick-rate independent: gravity is integrated by dtSec.
+// Target feel: apex ≈ 2.78 tiles, airtime ≈ 700 ms (analytic: v0²/(2|g|), 2v0/|g|).
+// JUMP_VELOCITY: initial vertical velocity, tiles/s.
+// GRAVITY:       vertical acceleration, tiles/s² (negative = downward).
+export const JUMP_VELOCITY = 16;
+export const GRAVITY = -46;
 const JUMP_COOLDOWN_MS = 350;
 const WORLD_SIZE = 50;
 const RECONNECT_WINDOW_SEC_DEFAULT = 30;
@@ -121,8 +125,9 @@ export class JumperRoom extends Room<JumperRoomState> {
       }
 
       if (player.isJumping) {
-        player.velZ += GRAVITY;
-        player.z += player.velZ * dtSec * 8;
+        // Exact integration under constant gravity — tick-rate independent.
+        player.z += player.velZ * dtSec + 0.5 * GRAVITY * dtSec * dtSec;
+        player.velZ += GRAVITY * dtSec;
         if (player.z <= 0) {
           player.z = 0;
           player.velZ = 0;
