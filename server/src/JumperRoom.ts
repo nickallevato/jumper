@@ -2,7 +2,7 @@ import { Room, Client } from "colyseus";
 import { JumperRoomState, PlayerState } from "@jumper/shared";
 
 const TICK_RATE = 20;
-const MOVE_SPEED = 4;
+const MOVE_SPEED = 8;
 // Jump physics are tick-rate independent: gravity is integrated by dtSec.
 // Target feel: apex ≈ 2.78 tiles, airtime ≈ 700 ms (analytic: v0²/(2|g|), 2v0/|g|).
 // JUMP_VELOCITY: initial vertical velocity, tiles/s.
