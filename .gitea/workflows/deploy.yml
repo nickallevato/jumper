@@ -322,7 +322,11 @@ jobs:
           sleep 8
           curl -fsS "http://$AWS_HOST/" -o /tmp/smoke-index.html 2>&1 | tee -a "$CI_OUTPUT_FILE"
           grep -q "<title>Jumper</title>" /tmp/smoke-index.html
-          curl -fsS "http://$AWS_HOST/matchmake/" 2>&1 | tee -a "$CI_OUTPUT_FILE"
+          # Real Colyseus matchmake call — creates a room if not present
+          MATCHMAKE=$(curl -fsS -X POST -H 'Content-Type: application/json' -d '{}' \
+            "http://$AWS_HOST/matchmake/joinOrCreate/jumper")
+          echo "$MATCHMAKE" | tee -a "$CI_OUTPUT_FILE"
+          echo "$MATCHMAKE" | grep -q '"roomId"'
           echo "Smoke OK: http://$AWS_HOST/"
 
       - name: Notify Paperclip of deploy-aws failure
