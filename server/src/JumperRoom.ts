@@ -12,7 +12,7 @@ function reconnectWindowSec(): number {
   const v = Number(process.env.JUMPER_RECONNECT_WINDOW_SEC);
   return Number.isFinite(v) && v > 0 ? v : RECONNECT_WINDOW_SEC_DEFAULT;
 }
-const COLORS = [0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12, 0x9b59b6, 0x1abc9c, 0xe67e22, 0xe91e63];
+const COLORS = [0xe85d4a, 0x4a90d9, 0xf2c94c, 0x6fcf97, 0xbb6bd9, 0xf2994a, 0xeb5757, 0x2d9cdb];
 
 type Input = { left: boolean; right: boolean; up: boolean; down: boolean; jump: boolean };
 

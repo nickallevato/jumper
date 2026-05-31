@@ -47,6 +47,7 @@ class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.drawBackground();
     this.drawTiles();
 
     this.statusText = this.add.text(8, 8, "Connecting...", {
@@ -74,6 +75,13 @@ class GameScene extends Phaser.Scene {
     void this.connect();
   }
 
+  private drawBackground(): void {
+    const w = this.scale.width, h = this.scale.height;
+    const g = this.add.graphics().setScrollFactor(0).setDepth(-10);
+    g.fillGradientStyle(0x87ceeb, 0x87ceeb, 0xd4e8c2, 0xd4e8c2, 1);
+    g.fillRect(0, 0, w, h);
+  }
+
   private drawTiles(): void {
     const g = this.add.graphics().setDepth(0);
     for (let ty = 0; ty < WORLD_SIZE; ty++) {
@@ -81,7 +89,7 @@ class GameScene extends Phaser.Scene {
         const { x, y } = isoToScreen(tx, ty);
         const sx = x + this.originX;
         const sy = y + this.originY;
-        const color = (tx + ty) % 2 === 0 ? 0x2d5a27 : 0x3a7a33;
+        const color = (tx + ty) % 2 === 0 ? 0x5b8c3e : 0x3d6b2e;
         const hw = TILE_W / 2, hh = TILE_H / 2;
         g.fillStyle(color, 1);
         g.fillPoints([
@@ -251,7 +259,7 @@ const config: Phaser.Types.Core.GameConfig = {
   parent: "game",
   width: 960,
   height: 640,
-  backgroundColor: "#0a0a14",
+  backgroundColor: "#87ceeb",
   scene: [GameScene],
 };
 
