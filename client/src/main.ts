@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { Client, Room, getStateCallbacks } from "colyseus.js";
 import type { JumperRoomState, PlayerState } from "@jumper/shared";
+import { AudioBus } from "./audio";
 
 // In dev, Vite proxies Colyseus traffic from the page port to the game server.
 // In production, serve client and server from the same origin.
@@ -29,6 +30,7 @@ type Input = { left: boolean; right: boolean; up: boolean; down: boolean; jump: 
 class GameScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private playerCountText!: Phaser.GameObjects.Text;
+  private chainText!: Phaser.GameObjects.Text;
   private room?: Room<JumperRoomState>;
   private playerViews = new Map<string, PlayerView>();
   private keys!: {
@@ -41,12 +43,20 @@ class GameScene extends Phaser.Scene {
   private lastInput: Input = { left: false, right: false, up: false, down: false, jump: false };
   private originX = 480;
   private originY = 160;
+  private audio = new AudioBus(this);
+  private muteText!: Phaser.GameObjects.Text;
+  private prevJumping = new Map<string, boolean>();
 
   constructor() {
     super("Game");
   }
 
+  preload(): void {
+    this.audio.preload();
+  }
+
   create(): void {
+    this.audio.init();
     this.drawBackground();
     this.drawTiles();
 
@@ -58,9 +68,21 @@ class GameScene extends Phaser.Scene {
       fontFamily: "monospace", fontSize: "13px", color: "#aaffaa",
     }).setScrollFactor(0).setDepth(100);
 
-    this.add.text(8, this.scale.height - 20, "WASD/Arrows: move  |  Space: jump", {
+    this.chainText = this.add.text(this.scale.width - 8, 28, "Chain: 0", {
+      fontFamily: "monospace", fontSize: "16px", color: "#56CCF2",
+      backgroundColor: "#00000055", padding: { x: 6, y: 3 },
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
+
+    this.add.text(8, this.scale.height - 20, "WASD/Arrows: move  |  Space: jump  |  M: mute", {
       fontFamily: "monospace", fontSize: "11px", color: "#888888",
     }).setScrollFactor(0).setDepth(100);
+
+    this.muteText = this.add.text(this.scale.width - 8, 8, this.audio.isMuted() ? "🔇 muted" : "", {
+      fontFamily: "monospace", fontSize: "11px", color: "#ffcc66",
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
+    this.events.on("audio:mute-changed", (muted: boolean) => {
+      this.muteText.setText(muted ? "🔇 muted" : "");
+    });
 
     const kbd = this.input.keyboard!;
     const K = Phaser.Input.Keyboard.KeyCodes;
@@ -134,13 +156,31 @@ class GameScene extends Phaser.Scene {
     console.log("[client] joined", room.roomId, room.sessionId);
 
     const $ = getStateCallbacks(room);
+    // Suppress join ding for the initial state batch — players who were already
+    // in the room when we connected aren't new arrivals from our perspective.
+    this.prevJumping.clear();
+    let initialBatch = true;
+    this.time.delayedCall(250, () => { initialBatch = false; });
     $(room.state).players.onAdd((player: PlayerState, sessionId: string) => {
       this.addPlayerView(sessionId, player, $);
       this.updateCount();
+      if (!initialBatch && sessionId !== room.sessionId) this.audio.play("join");
     });
     $(room.state).players.onRemove((_p: PlayerState, sessionId: string) => {
       this.removePlayerView(sessionId);
+      this.prevJumping.delete(sessionId);
       this.updateCount();
+      if (sessionId !== room.sessionId) this.audio.play("join", { volume: 0.7 });
+    });
+
+    $(room.state).listen("chainCount", (count: number) => {
+      this.chainText.setText(`Chain: ${count}`);
+      if (count > 0) this.pulseChainHud();
+    });
+
+    room.onMessage("chainLink", (msg: { a: string; b: string; count: number }) => {
+      this.drawChainLink(msg.a, msg.b);
+      this.playChainLink(msg.count);
     });
 
     room.onLeave((code) => {
@@ -202,9 +242,19 @@ class GameScene extends Phaser.Scene {
 
     this.playerViews.set(sessionId, { shadow, body, label });
 
+    this.prevJumping.set(sessionId, player.isJumping);
+
     $(player).onChange(() => {
       const view = this.playerViews.get(sessionId);
       if (!view) return;
+      const wasJumping = this.prevJumping.get(sessionId) ?? false;
+      if (player.isJumping !== wasJumping) {
+        const isSelfNow = this.room?.sessionId === sessionId;
+        const volume = isSelfNow ? 1 : 0.55;
+        if (player.isJumping) this.audio.play("jump", { volume });
+        else this.audio.play("land", { volume });
+        this.prevJumping.set(sessionId, player.isJumping);
+      }
       const p = this.screenPos(player.x, player.y, player.z);
       const gp = this.screenPos(player.x, player.y, 0);
       view.shadow.setPosition(gp.x, gp.y + 4);
@@ -235,6 +285,39 @@ class GameScene extends Phaser.Scene {
   private updateCount(): void {
     const n = this.room?.state.players.size ?? 0;
     this.playerCountText.setText(`${n}/? players`);
+  }
+
+  private pulseChainHud(): void {
+    this.tweens.add({
+      targets: this.chainText,
+      scale: { from: 1, to: 1.3 },
+      duration: 125,
+      yoyo: true,
+      ease: "Quad.easeOut",
+    });
+  }
+
+  private drawChainLink(aId: string, bId: string): void {
+    const a = this.playerViews.get(aId), b = this.playerViews.get(bId);
+    if (!a || !b) return;
+    const g = this.add.graphics().setDepth(1000);
+    g.lineStyle(3, 0x56CCF2, 1);
+    g.beginPath();
+    g.moveTo(a.body.x, a.body.y);
+    g.lineTo(b.body.x, b.body.y);
+    g.strokePath();
+    this.tweens.add({
+      targets: g,
+      alpha: { from: 1, to: 0 },
+      duration: 400,
+      ease: "Quad.easeIn",
+      onComplete: () => g.destroy(),
+    });
+  }
+
+  private playChainLink(count: number): void {
+    const semitones = Math.min(Math.max(0, count), 8) * 0.05;
+    this.audio.play("chain", { detune: semitones * 100 });
   }
 
   override update(): void {

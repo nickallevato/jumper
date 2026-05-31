@@ -3,6 +3,10 @@ import { JumperRoomState, PlayerState } from "@jumper/shared";
 
 const TICK_RATE = 20;
 const MOVE_SPEED = 4;
+// Chain Trail coop verb (SMA-230): when two players jump within radius+window, link them.
+export const CHAIN_RADIUS_TILES = 5;
+export const CHAIN_WINDOW_MS = 1200;
+export const CHAIN_BREAK_MS = 1500;
 // Jump physics are tick-rate independent: gravity is integrated by dtSec.
 // Target feel: apex ≈ 2.78 tiles, airtime ≈ 700 ms (analytic: v0²/(2|g|), 2v0/|g|).
 // JUMP_VELOCITY: initial vertical velocity, tiles/s.
@@ -27,6 +31,9 @@ export class JumperRoom extends Room<JumperRoomState> {
   private pendingJump = new Set<string>();
   private reconnecting = new Set<string>();
   private colorIndex = 0;
+  private recentJumps = new Map<string, { t: number; x: number; y: number }>();
+  // Overridable in tests so chain-window math doesn't rely on wall clock.
+  protected now(): number { return Date.now(); }
 
   override onCreate(): void {
     this.state = new JumperRoomState();
@@ -91,6 +98,22 @@ export class JumperRoom extends Room<JumperRoomState> {
     this.state.players.delete(sessionId);
     this.inputs.delete(sessionId);
     this.pendingJump.delete(sessionId);
+    this.recentJumps.delete(sessionId);
+  }
+
+  private detectChainLink(sessionId: string, x: number, y: number): void {
+    const t = this.now();
+    const result = evaluateChainJump({
+      sessionId, x, y, t,
+      recentJumps: this.recentJumps,
+      chainCount: this.state.chainCount,
+      chainLastAt: this.state.chainLastAt,
+    });
+    this.state.chainCount = result.chainCount;
+    this.state.chainLastAt = result.chainLastAt;
+    if (result.partner !== null) {
+      this.broadcast("chainLink", { a: result.partner, b: sessionId, count: result.chainCount });
+    }
   }
 
   private tick(dt: number): void {
@@ -122,6 +145,7 @@ export class JumperRoom extends Room<JumperRoomState> {
         player.velZ = JUMP_VELOCITY;
         player.jumpCooldown = JUMP_COOLDOWN_MS;
         this.pendingJump.delete(sessionId);
+        this.detectChainLink(sessionId, player.x, player.y);
       }
 
       if (player.isJumping) {
@@ -140,4 +164,44 @@ export class JumperRoom extends Room<JumperRoomState> {
   override onDispose(): void {
     console.log(`[JumperRoom] disposed (${this.roomId})`);
   }
+}
+
+export type JumpRecord = { t: number; x: number; y: number };
+export type ChainEvalInput = {
+  sessionId: string;
+  x: number;
+  y: number;
+  t: number;
+  recentJumps: Map<string, JumpRecord>;
+  chainCount: number;
+  chainLastAt: number;
+};
+export type ChainEvalResult = {
+  chainCount: number;
+  chainLastAt: number;
+  partner: string | null;
+};
+
+// Pure chain-link evaluator. Mutates `recentJumps` (registers this jump) but
+// otherwise side-effect free so it can be unit tested directly.
+export function evaluateChainJump(input: ChainEvalInput): ChainEvalResult {
+  const { sessionId, x, y, t, recentJumps } = input;
+  let { chainCount, chainLastAt } = input;
+  if (chainCount > 0 && t - chainLastAt > CHAIN_BREAK_MS) chainCount = 0;
+  let partner: string | null = null;
+  for (const [otherId, jump] of recentJumps) {
+    if (otherId === sessionId) continue;
+    if (t - jump.t > CHAIN_WINDOW_MS) continue;
+    const dx = jump.x - x, dy = jump.y - y;
+    if (dx * dx + dy * dy <= CHAIN_RADIUS_TILES * CHAIN_RADIUS_TILES) {
+      partner = otherId;
+      break;
+    }
+  }
+  recentJumps.set(sessionId, { t, x, y });
+  if (partner !== null) {
+    chainCount += 1;
+    chainLastAt = t;
+  }
+  return { chainCount, chainLastAt, partner };
 }
