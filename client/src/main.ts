@@ -29,6 +29,7 @@ type Input = { left: boolean; right: boolean; up: boolean; down: boolean; jump: 
 class GameScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private playerCountText!: Phaser.GameObjects.Text;
+  private chainText!: Phaser.GameObjects.Text;
   private room?: Room<JumperRoomState>;
   private playerViews = new Map<string, PlayerView>();
   private keys!: {
@@ -57,6 +58,11 @@ class GameScene extends Phaser.Scene {
     this.playerCountText = this.add.text(8, 28, "", {
       fontFamily: "monospace", fontSize: "13px", color: "#aaffaa",
     }).setScrollFactor(0).setDepth(100);
+
+    this.chainText = this.add.text(this.scale.width - 8, 28, "Chain: 0", {
+      fontFamily: "monospace", fontSize: "16px", color: "#56CCF2",
+      backgroundColor: "#00000055", padding: { x: 6, y: 3 },
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
 
     this.add.text(8, this.scale.height - 20, "WASD/Arrows: move  |  Space: jump", {
       fontFamily: "monospace", fontSize: "11px", color: "#888888",
@@ -141,6 +147,15 @@ class GameScene extends Phaser.Scene {
     $(room.state).players.onRemove((_p: PlayerState, sessionId: string) => {
       this.removePlayerView(sessionId);
       this.updateCount();
+    });
+
+    $(room.state).listen("chainCount", (count: number) => {
+      this.chainText.setText(`Chain: ${count}`);
+      if (count > 0) this.pulseChainHud();
+    });
+
+    room.onMessage("chainLink", (msg: { a: string; b: string; count: number }) => {
+      this.drawChainLink(msg.a, msg.b);
     });
 
     room.onLeave((code) => {
@@ -235,6 +250,34 @@ class GameScene extends Phaser.Scene {
   private updateCount(): void {
     const n = this.room?.state.players.size ?? 0;
     this.playerCountText.setText(`${n}/? players`);
+  }
+
+  private pulseChainHud(): void {
+    this.tweens.add({
+      targets: this.chainText,
+      scale: { from: 1, to: 1.3 },
+      duration: 125,
+      yoyo: true,
+      ease: "Quad.easeOut",
+    });
+  }
+
+  private drawChainLink(aId: string, bId: string): void {
+    const a = this.playerViews.get(aId), b = this.playerViews.get(bId);
+    if (!a || !b) return;
+    const g = this.add.graphics().setDepth(1000);
+    g.lineStyle(3, 0x56CCF2, 1);
+    g.beginPath();
+    g.moveTo(a.body.x, a.body.y);
+    g.lineTo(b.body.x, b.body.y);
+    g.strokePath();
+    this.tweens.add({
+      targets: g,
+      alpha: { from: 1, to: 0 },
+      duration: 400,
+      ease: "Quad.easeIn",
+      onComplete: () => g.destroy(),
+    });
   }
 
   override update(): void {
