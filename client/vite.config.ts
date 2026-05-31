@@ -13,7 +13,7 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
       },
-      "^/[a-z0-9]{8,}$": {
+      "^/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)?(?:\\?.*)?$": {
         target: `http://localhost:${SERVER_PORT}`,
         ws: true,
         changeOrigin: true,
