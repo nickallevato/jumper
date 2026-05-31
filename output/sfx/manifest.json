@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-05-31",
+  "issue": "SMA-231",
+  "model": "python3/numpy procedural synthesis",
+  "sampleRate": 44100,
+  "bitDepth": 16,
+  "channels": 1,
+  "normalization": "-3 dBFS peak",
+  "assets": [
+    {
+      "key": "jump",
+      "file": "client/public/assets/sfx/jump.wav",
+      "durationMs": 200,
+      "description": "Light upward whoosh — layered triangle sweep (350-700Hz) + filtered noise burst for breathy air quality",
+      "seed": 42,
+      "passesReview": true
+    },
+    {
+      "key": "land",
+      "file": "client/public/assets/sfx/land.wav",
+      "durationMs": 180,
+      "description": "Soft thump / paw-on-grass — low sine sweep (180-80Hz) + muffled crinkle noise texture",
+      "seed": 99,
+      "passesReview": true
+    },
+    {
+      "key": "join",
+      "file": "client/public/assets/sfx/join.wav",
+      "durationMs": 350,
+      "description": "Friendly two-note chime (C5-E5) with 2nd-harmonic bell shimmer",
+      "seed": null,
+      "passesReview": true
+    }
+  ],
+  "notes": "All clips warm/cozy tone. Jump uses triangle wave for softness over sine. Land has grass-texture noise layer. Join chime uses major-third interval for friendliness. All normalized to -3 dBFS."
+}
