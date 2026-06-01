@@ -1,4 +1,29 @@
 services:
   client:
+    expose:
+      - "80"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    command:
+      - caddy
+      - reverse-proxy
+      - --from
+      - jumper.coldsmokeconsulting.com
+      - --to
+      - client:80
+    depends_on:
+      - client
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:

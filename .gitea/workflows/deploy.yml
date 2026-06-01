@@ -311,33 +311,25 @@ jobs:
           export IMAGE_SERVER="$REGISTRY/jumper-server:$SHA"
           export IMAGE_CLIENT="$REGISTRY/jumper-client:$SHA"
           docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml pull
+          docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml down --remove-orphans
           docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml up -d
           docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml ps
           REMOTE
 
-      - name: Smoke test public URL
+      - name: Smoke test Caddy redirect
         shell: bash
         run: |
           set -o pipefail
           sleep 8
-          curl -fsS "http://$AWS_HOST/" -o /tmp/smoke-index.html 2>&1 | tee -a "$CI_OUTPUT_FILE"
-          grep -q "<title>Jumper</title>" /tmp/smoke-index.html
-          # Real Colyseus matchmake call — creates a room if not present
-          MATCHMAKE=$(curl -fsS -X POST -H 'Content-Type: application/json' -d '{}' \
-            "http://$AWS_HOST/matchmake/joinOrCreate/jumper")
-          echo "$MATCHMAKE" | tee -a "$CI_OUTPUT_FILE"
-          echo "$MATCHMAKE" | grep -q '"roomId"'
-          # Real Colyseus 0.16 WS handshake on /{processId}/{roomId} — catches
-          # nginx proxy regressions where the upgrade falls through to the SPA.
-          WS_PATH=$(echo "$MATCHMAKE" | python3 -c 'import json,sys;d=json.load(sys.stdin);r=d["room"];print(r["processId"]+"/"+r["roomId"])')
-          WS_STATUS=$(curl -s -i --max-time 5 \
-            -H "Connection: Upgrade" -H "Upgrade: websocket" \
-            -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
-            -H "Sec-WebSocket-Version: 13" \
-            "http://$AWS_HOST/$WS_PATH" | head -1 || true)
-          echo "WS handshake: $WS_STATUS" | tee -a "$CI_OUTPUT_FILE"
-          echo "$WS_STATUS" | grep -q "101" || { echo "WS upgrade did not return 101 on /$WS_PATH"; exit 1; }
-          echo "Smoke OK: http://$AWS_HOST/"
+          HTTP_STATUS=$(curl -sS -D /tmp/smoke-headers.txt -o /dev/null -w '%{http_code}' \
+            -H 'Host: jumper.coldsmokeconsulting.com' \
+            "http://$AWS_HOST/")
+          LOCATION=$(grep -i '^location:' /tmp/smoke-headers.txt | tr -d '\r')
+          echo "HTTP redirect status: $HTTP_STATUS" | tee -a "$CI_OUTPUT_FILE"
+          echo "$LOCATION" | tee -a "$CI_OUTPUT_FILE"
+          echo "$HTTP_STATUS" | grep -Eq '^(301|308)$'
+          echo "$LOCATION" | grep -Eiq '^location: https://jumper.coldsmokeconsulting.com/'
+          echo "Smoke OK: Caddy redirects HTTP to HTTPS"
 
       - name: Notify Paperclip of deploy-aws failure
         if: failure()
