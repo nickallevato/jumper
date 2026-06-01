@@ -33,6 +33,19 @@ export function paintOrder(tiles) {
   return [...tiles].sort((a, b) => (a.tx + a.ty) - (b.tx + b.ty))
 }
 
+// Display-list depth for the painter's algorithm. The (tx+ty) axis runs
+// back-to-front on screen, so larger sums draw on top; ties break by height.
+// ISO_DEPTH_ROW must dominate any single tile's tz so rows never interleave.
+export const ISO_DEPTH_ROW = 100
+// Entities (players) stand ON the tile at their cell, so they sit a half-row
+// above tiles of the same (tx+ty) — but still BEHIND tiles one row in front,
+// which is what lets a cliff/mountain occlude a player walking behind it.
+export const ISO_ENTITY_BIAS = ISO_DEPTH_ROW / 2
+
+export function isoDepth(tx, ty, tz = 0) {
+  return (tx + ty) * ISO_DEPTH_ROW + tz
+}
+
 // Convert screen-relative input intent (mx,my in {-1,0,1}: +x right, +y down on screen)
 // into a normalized tile-space direction.
 export function screenToTileDir(mx, my) {

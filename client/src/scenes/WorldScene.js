@@ -3,7 +3,7 @@ import { IsoMap } from '../IsoMap.js'
 import { Player } from '../Player.js'
 import { RemotePlayer } from '../RemotePlayer.js'
 import { getSocket } from '../net.js'
-import { blockFacePoints, toScreen, topDiamondPoints } from '../../../shared/coordinates.js'
+import { blockFacePoints, toScreen, topDiamondPoints, isoDepth } from '../../../shared/coordinates.js'
 import { SOCKET_EVENTS as E, TILE_H, TILE_W } from '../../../shared/constants.js'
 import { COUNTERWEIGHT } from '../../../shared/puzzles.js'
 import { cosmeticIdForUnlock } from '../../../shared/cosmetics.js'
@@ -278,6 +278,7 @@ export class WorldScene extends Phaser.Scene {
       g.fillStyle(0x2b1d10, 1)
       g.fillCircle(0, -4, 3)   // keyhole
       g.setPosition(x, y - 6)
+      g.setDepth(isoDepth(d.tx, d.ty, 1))   // door fills a wall gap — sort like a wall
       this._doorGfx.set(`${d.tx},${d.ty}`, g)
     }
   }
@@ -322,6 +323,7 @@ export class WorldScene extends Phaser.Scene {
     g.fillPoints(faces.right, true)
     g.fillStyle(0xc79a5b, 1)   // top
     g.fillPoints(faces.top, true)
+    g.setDepth(isoDepth(this.riser.tx, this.riser.ty, this.riser.tz))
   }
 
   // Screen-space bounding rect covering all tiles + platforms, with margin (for camera clamp).
@@ -374,6 +376,7 @@ export class WorldScene extends Phaser.Scene {
     g.fillPoints(faces.right, true)
     g.fillStyle(0xb9f2e6, 0.6)
     g.fillPoints(faces.top, true)
+    g.setDepth(isoDepth(p.tx, p.ty, p.tz))
     g.setVisible(false)
     return g
   }
@@ -432,6 +435,7 @@ export class WorldScene extends Phaser.Scene {
       g._baseX = x
       g._baseY = y
       g.setPosition(x, y)
+      g.setDepth(isoDepth(item.wx, item.wy, item.wz ?? 0) + 0.2)  // rests on its tile, just above it
       this._worldItemGfx.set(item.worldItemId, g)
       g._worldItemId = item.worldItemId
       g._wx = item.wx

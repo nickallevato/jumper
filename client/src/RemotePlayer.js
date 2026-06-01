@@ -1,4 +1,4 @@
-import { toScreen } from '../../shared/coordinates.js'
+import { toScreen, isoDepth, ISO_ENTITY_BIAS } from '../../shared/coordinates.js'
 import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
 import {
@@ -89,6 +89,10 @@ export class RemotePlayer {
     this.shadowGfx.setScale(k, k)
     this.shadowGfx.setAlpha(0.28 * k)
     this.indicatorGfx.setPosition(this.gfx.x, this.gfx.y - 34)
+    const depth = isoDepth(this.tx, this.ty, this.tz) + ISO_ENTITY_BIAS
+    this.gfx.setDepth(depth)
+    this.shadowGfx.setDepth(depth - 1)
+    this.indicatorGfx.setDepth(depth + 0.1)
   }
 
   destroy() {

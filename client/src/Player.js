@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { clampTileCoordinate, toScreen, screenToTileDir } from '../../shared/coordinates.js'
+import { clampTileCoordinate, toScreen, screenToTileDir, isoDepth, ISO_ENTITY_BIAS } from '../../shared/coordinates.js'
 import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
 import { Sound } from './sound.js'
@@ -396,6 +396,12 @@ export class Player {
     const wallNudge = this._isWallSliding ? -this._wallDir.x * 2 : 0
     this.gfx.setPosition(x + wallNudge, y + this._bobOffset)
     this.gfx.setScale(this._scaleX, this._scaleY)
+    // Depth-sort against tiles: a cliff one row in front occludes the player;
+    // the player draws over the tile it stands on (ISO_ENTITY_BIAS).
+    const depth = isoDepth(this.tx, this.ty, this.tz) + ISO_ENTITY_BIAS
+    this.gfx.setDepth(depth)
+    this.shadowGfx.setDepth(depth - 1)
+    this.indicatorGfx.setDepth(depth + 0.1)
     // Height cue: shadow shrinks + fades as the player rises above its surface.
     const lift = Math.max(0, this.tz - shadowZ)
     const k = 1 / (1 + lift * 0.5)

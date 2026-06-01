@@ -1,4 +1,4 @@
-import { blockFacePoints, paintOrder, toScreen } from '../../shared/coordinates.js'
+import { blockFacePoints, paintOrder, toScreen, isoDepth } from '../../shared/coordinates.js'
 import { TILE_H } from '../../shared/constants.js'
 
 const STYLES = {
@@ -32,15 +32,24 @@ export class IsoMap {
     this.originX = originX
     this.originY = originY
     this.platforms = platforms
+    // Flat ground/water shares one background layer, always behind entities.
     this._graphics = scene.add.graphics()
+    this._graphics.setDepth(-1)
+    // Each raised tile (wall/cliff/platform) is its own object so the display
+    // list can depth-sort it against the player — letting a mountain in front
+    // occlude a player walking behind it.
+    this._raised = []
     this.draw()
   }
 
   draw() {
     const g = this._graphics
     g.clear()
+    for (const r of this._raised) r.destroy()
+    this._raised = []
 
-    const all = []
+    const flat = []
+    const raised = []
 
     for (let ty = 0; ty < this.grid.length; ty++) {
       for (let tx = 0; tx < this.grid[ty].length; tx++) {
@@ -50,33 +59,42 @@ export class IsoMap {
         // rise above the floor — drawing them at tz=0 made them sunken, so the player next
         // to a wall looked half a tile too high. Ground/water stay flat at tz=0.
         const tz = type === 2 ? WALL_HEIGHT : 0
-        all.push({ tx, ty, tz, type })
+        ;(tz > 0 ? raised : flat).push({ tx, ty, tz, type })
       }
     }
 
     for (const p of this.platforms) {
-      all.push({ tx: p.tx, ty: p.ty, tz: p.tz, type: p.type ?? 4 })
+      const tile = { tx: p.tx, ty: p.ty, tz: p.tz, type: p.type ?? 4 }
+      ;(tile.tz > 0 ? raised : flat).push(tile)
     }
 
-    // Back-to-front: lower tx+ty first; same sum -> lower tz first
-    const ordered = paintOrder(all).sort((a, b) => {
-      const d = (a.tx + a.ty) - (b.tx + b.ty)
-      return d !== 0 ? d : a.tz - b.tz
-    })
+    // Flat tiles: painter-ordered onto the single background layer (they never
+    // occlude entities, so internal draw order is enough).
+    for (const tile of paintOrder(flat)) this._paintTile(g, tile)
 
-    for (const tile of ordered) {
+    // Raised tiles: each on its own graphics, depth-sorted by iso position.
+    for (const tile of raised) {
       const style = STYLES[tile.type]
       if (!style) continue
-      const { x, y } = toScreen(tile.tx, tile.ty, tile.tz, this.originX, this.originY)
-      // Raised tiles (walls, platforms) draw their sides down to the ground so they read
-      // as solid blocks/pillars; flat tiles keep their thin lip.
-      const depth = tile.tz > 0 ? tile.tz * TILE_H + 10 : style.depth
-      // Flat ground/water gets a subtle deterministic top-color jitter for texture.
-      const topColor = (tile.type === 1 || tile.type === 3)
-        ? shade(style.top, tileShade(tile.tx, tile.ty))
-        : style.top
-      this._drawTile(g, x, y, style, depth, topColor)
+      const rg = this.scene.add.graphics()
+      rg.setDepth(isoDepth(tile.tx, tile.ty, tile.tz))
+      this._paintTile(rg, tile)
+      this._raised.push(rg)
     }
+  }
+
+  _paintTile(g, tile) {
+    const style = STYLES[tile.type]
+    if (!style) return
+    const { x, y } = toScreen(tile.tx, tile.ty, tile.tz, this.originX, this.originY)
+    // Raised tiles (walls, platforms) draw their sides down to the ground so they read
+    // as solid blocks/pillars; flat tiles keep their thin lip.
+    const depth = tile.tz > 0 ? tile.tz * TILE_H + 10 : style.depth
+    // Flat ground/water gets a subtle deterministic top-color jitter for texture.
+    const topColor = (tile.type === 1 || tile.type === 3)
+      ? shade(style.top, tileShade(tile.tx, tile.ty))
+      : style.top
+    this._drawTile(g, x, y, style, depth, topColor)
   }
 
   _drawTile(g, sx, sy, style, depth, topColor) {
