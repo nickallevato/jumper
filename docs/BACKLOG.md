@@ -37,6 +37,13 @@ To grow: append the next direction to `OVERWORLD_GROWTH` in `client/src/maps.js`
 
 ## Now (next iteration)
 
+### S2.2a. Define `dungeon_deep` map for z-axis audit — *Pillars 1,2,6 · Size S · Gap?*
+Implement the GDD-defined Undercroft as a real `ROOMS.dungeon_deep` entry so the Sprint 2 z-axis
+audit stops falling back to overworld. Scope is intentionally small: map/grid, spawn, return
+portal, content bounds, camera-follow, and a solo-reachable descending platform path with at least
+four authored heights. Do not add new mechanics, rewards, doors, Lantern dependency, or moving
+platforms in this pass.
+
 ## Later
 
 ### 14. Landing dust puff — *Pillars 5 · Size S*

@@ -64,6 +64,17 @@ rooms statically framed as before. Ringing the bell is a **world event**: the se
 (2,7): visible book-stack platforms climb partway, and Lantern-revealed hidden shelves complete
 the climb to an archive ledge that records `secret_archivist` (move there holding the Lantern).
 
+`dungeon_deep` (the Undercroft) is in Sprint 2 scope and should be defined as a real room rather
+than removed from z-axis audits. It is the skill-2 deep room unlocked by `secret_deep_dive` and
+should serve as a compact descent dungeon: a dark, narrow 8x12-ish room with camera-follow, an
+overworld return portal near the top spawn, staggered ledges that step downward to negative-feeling
+screen space while keeping authored `tz` values non-negative, and a bottom ledge that can later
+host the deep reward/secret. The first implementation should be audit-focused, not a new mechanic:
+no new input, no moving platforms, no door, no Lantern dependency, and no new server trigger unless
+explicitly scoped by a follow-up design ticket. Its platform path should exercise z ordering and
+camera clamping with at least four authored heights within `MAX_JUMP_HEIGHT` increments, while
+staying reachable solo from spawn.
+
 Platform landing uses a tile-centered footprint (`round(tx)`), matching the diamond's drawn
 position, so feet land where the platform visually is. Raised tiles/platforms render as
 full-height pillars to the ground (side depth = `tz*TILE_H`), so elevation is legible and a
