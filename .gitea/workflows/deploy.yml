@@ -244,6 +244,7 @@ jobs:
       REGISTRY: 675911353984.dkr.ecr.us-west-2.amazonaws.com
       AWS_REGION: us-west-2
       AWS_HOST: ${{ secrets.AWS_HOST_IP }}
+      PUBLIC_DOMAIN: jumper.coldsmokeconsulting.com
       AWS_USER: ubuntu
     steps:
       - uses: actions/checkout@v4
@@ -269,7 +270,7 @@ jobs:
         run: |
           set -o pipefail
           ssh -i ~/.ssh/jumper-deploy "$AWS_USER@$AWS_HOST" 'mkdir -p /opt/jumper' 2>&1 | tee -a "$CI_OUTPUT_FILE"
-          scp -i ~/.ssh/jumper-deploy deploy/docker-compose.yml deploy/docker-compose.aws.yml \
+          scp -i ~/.ssh/jumper-deploy deploy/docker-compose.yml deploy/docker-compose.aws.yml deploy/Caddyfile \
             "$AWS_USER@$AWS_HOST:/opt/jumper/" 2>&1 | tee -a "$CI_OUTPUT_FILE"
 
       - name: Login + pull + up on AWS host
@@ -292,9 +293,8 @@ jobs:
           echo "$ECR_PASS" | docker login --username AWS --password-stdin "$REGISTRY"
           export IMAGE_APP="$REGISTRY/jumper-server:$SHA"
           docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml pull
-          # The previous two-container stack (server + client) leaves orphan
-          # containers holding port 80; tear the project down first so the new
-          # single `app` service can bind :80. Named volumes survive `down`.
+          # Tear down first so stale project containers cannot hold public ports.
+          # Named volumes survive `down`, including Caddy's certificate storage.
           docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml down --remove-orphans
           docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml up -d --remove-orphans
           docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml ps
@@ -304,9 +304,28 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          sleep 8
-          curl -fsS "http://$AWS_HOST/" -o /tmp/smoke-index.html 2>&1 | tee -a "$CI_OUTPUT_FILE"
+          for attempt in {1..30}; do
+            if curl -fsS "http://$AWS_HOST/" -o /tmp/smoke-index.html 2>&1 | tee -a "$CI_OUTPUT_FILE"; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "HTTP smoke failed after $attempt attempts" | tee -a "$CI_OUTPUT_FILE"
+              exit 1
+            fi
+            sleep 2
+          done
           grep -q "<title>Jumper</title>" /tmp/smoke-index.html
+          for attempt in {1..30}; do
+            if curl -fsS "https://$PUBLIC_DOMAIN/" -o /tmp/smoke-index-https.html 2>&1 | tee -a "$CI_OUTPUT_FILE"; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "HTTPS smoke failed after $attempt attempts" | tee -a "$CI_OUTPUT_FILE"
+              exit 1
+            fi
+            sleep 2
+          done
+          grep -q "<title>Jumper</title>" /tmp/smoke-index-https.html
           # socket.io v4 polling handshake — the server replies with an open
           # packet containing a session id. Catches reverse-proxy / port regressions.
           HS=$(curl -fsS "http://$AWS_HOST/socket.io/?EIO=4&transport=polling")
@@ -316,7 +335,7 @@ jobs:
           AUTH=$(curl -fsS -X POST -H 'Content-Type: application/json' -d '{}' "http://$AWS_HOST/api/auth")
           echo "auth: $AUTH" | tee -a "$CI_OUTPUT_FILE"
           echo "$AUTH" | grep -q '"token"' || { echo "/api/auth did not return a token"; exit 1; }
-          echo "Smoke OK: http://$AWS_HOST/"
+          echo "Smoke OK: http://$AWS_HOST/ and https://$PUBLIC_DOMAIN/"
 
       - name: Notify Paperclip of deploy-aws failure
         if: failure()

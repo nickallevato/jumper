@@ -11,7 +11,21 @@ services:
     networks:
       - app
 
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - app
+
 volumes:
+  caddy-config:
+  caddy-data:
   jumper-data:
 
 networks:

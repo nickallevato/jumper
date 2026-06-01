@@ -1,0 +1,7 @@
+jumper.coldsmokeconsulting.com {
+	reverse_proxy app:3002
+}
+
+:80 {
+	reverse_proxy app:3002
+}
