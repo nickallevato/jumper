@@ -1,0 +1,19 @@
+services:
+  app:
+    image: ${IMAGE_APP:-675911353984.dkr.ecr.us-west-2.amazonaws.com/jumper-server:latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3002"
+      DB_PATH: /data/jumper.db
+    volumes:
+      - jumper-data:/data
+    networks:
+      - app
+
+volumes:
+  jumper-data:
+
+networks:
+  app:
+    driver: bridge

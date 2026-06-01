@@ -15,7 +15,7 @@ const isProd = process.env.NODE_ENV === 'production'
 const app = express()
 const httpServer = createServer(app)
 const io = new Server(httpServer, { cors: { origin: '*' } })
-const db = initDb()
+const db = initDb(process.env.DB_PATH)
 
 app.use(express.json())
 
