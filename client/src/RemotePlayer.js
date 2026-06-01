@@ -1,14 +1,23 @@
 import { toScreen } from '../../shared/coordinates.js'
 import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
+import {
+  pushSnapshot,
+  sampleSnapshots,
+  pruneSnapshots,
+  REMOTE_RENDER_DELAY_MS,
+} from './interpolation.js'
 
 export class RemotePlayer {
   constructor(scene, id, x, y, z, cosmeticId = 1) {
     this.id = id
     this.tx = x; this.ty = y; this.tz = z
-    this._targetX = x; this._targetY = y; this._targetZ = z
     this.scene = scene
     this.cosmeticId = cosmeticId
+    // Buffer of timestamped authoritative snapshots; we render a fixed delay in
+    // the past and interpolate between snapshots for smooth, constant-velocity
+    // motion instead of exponential easing toward a moving target.
+    this._buffer = [{ t: scene.time.now, x, y, z }]
 
     const sg = scene.add.graphics()
     sg.fillStyle(0x000000, 0.28)
@@ -49,7 +58,7 @@ export class RemotePlayer {
   }
 
   updateTarget(x, y, z, cosmeticId) {
-    this._targetX = x; this._targetY = y; this._targetZ = z
+    this._buffer = pushSnapshot(this._buffer, { t: this.scene.time.now, x, y, z })
     if (cosmeticId != null && cosmeticId !== this.cosmeticId) {
       this.cosmeticId = cosmeticId
       this._drawShape()
@@ -57,10 +66,12 @@ export class RemotePlayer {
   }
 
   update() {
-    const a = 0.3
-    this.tx += (this._targetX - this.tx) * a
-    this.ty += (this._targetY - this.ty) * a
-    this.tz += (this._targetZ - this.tz) * a
+    const renderTime = this.scene.time.now - REMOTE_RENDER_DELAY_MS
+    const p = sampleSnapshots(this._buffer, renderTime)
+    if (p) {
+      this.tx = p.x; this.ty = p.y; this.tz = p.z
+    }
+    this._buffer = pruneSnapshots(this._buffer, renderTime)
     this._syncPosition()
   }
 

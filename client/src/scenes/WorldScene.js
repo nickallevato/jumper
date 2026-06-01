@@ -84,7 +84,9 @@ export class WorldScene extends Phaser.Scene {
     if (room.follow) {
       const b = this._computeBounds(originX, originY, room.contentBounds)
       this.cameras.main.setBounds(b.x, b.y, b.w, b.h)
-      this.cameras.main.startFollow(this.player.gfx, true, 0.12, 0.12)
+      // Snappier follow: 0.12 trailed the player ~130ms, reading as input lag.
+      // 0.3 tracks within ~50ms while still smoothing single-frame jitter.
+      this.cameras.main.startFollow(this.player.gfx, true, 0.3, 0.3)
     }
 
     // Brief grace so we don't instantly re-trigger the portal we just arrived through.
