@@ -8,6 +8,7 @@ export const JUMP_VELOCITY = 0.30     // tiles/tick upward (legacy / item baseli
 export const GRAVITY = 0.022          // tiles/tick² downward
 export const ROOM_CAP_SMALL = 6
 export const ROOM_CAP_DUNGEON = 50
+export const FALL_OUT_RECOVERY_DEPTH = 1.0
 
 export const ROOM_CONTENT_BOUNDS = {
   overworld: {
@@ -60,6 +61,17 @@ export function contentBoundsForRoom(roomId) {
 
 export function spawnForRoom(roomId) {
   return ROOM_SPAWNS[roomId] ?? ROOM_SPAWNS.overworld
+}
+
+export function isFallOutPosition(roomId, { z }) {
+  const b = contentBoundsForRoom(roomId)
+  return Number.isFinite(z) && z < b.minZ - FALL_OUT_RECOVERY_DEPTH
+}
+
+export function fallOutRecoveryPosition(roomId) {
+  const spawn = spawnForRoom(roomId)
+  const b = contentBoundsForRoom(roomId)
+  return { x: spawn.tx, y: spawn.ty, z: b.minZ }
 }
 
 export function clampRoomPosition(roomId, { x, y, z }) {

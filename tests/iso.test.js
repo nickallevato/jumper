@@ -17,6 +17,8 @@ import {
   ROOM_SPAWNS,
   clampAllowedRoomPosition,
   contentBoundsForRoom,
+  fallOutRecoveryPosition,
+  isFallOutPosition,
   isRoomPositionPassable,
 } from '../shared/constants.js'
 import { ROOMS } from '../client/src/maps.js'
@@ -226,6 +228,17 @@ describe('iso', () => {
       { x: 2, y: 4, z: 0 },
       { x: -20, y: 99, z: 99 }
     )).toEqual({ x: 0.51, y: 4.49, z: 5.4 })
+  })
+
+  it('server fall-out recovery sends follow-room drops back to spawn', () => {
+    for (const roomId of ['dungeon_belltower', 'dungeon_library']) {
+      expect(isFallOutPosition(roomId, { z: -1.01 }), roomId).toBe(true)
+      expect(fallOutRecoveryPosition(roomId), roomId).toEqual({
+        x: ROOM_SPAWNS[roomId].tx,
+        y: ROOM_SPAWNS[roomId].ty,
+        z: ROOM_CONTENT_BOUNDS[roomId].minZ,
+      })
+    }
   })
 
   it('shared room passability rejects rounded wall footprints', () => {

@@ -4,7 +4,7 @@ import { getWorldItems, pickupItem, dropItem, useItem } from './items.js'
 import { checkDiscovery } from './secrets.js'
 import {
   TICK_MS, ROOM_CAP_SMALL, BOUNCE_VEL, SOCKET_EVENTS as E,
-  clampAllowedRoomPosition, spawnForRoom,
+  clampAllowedRoomPosition, fallOutRecoveryPosition, isFallOutPosition, spawnForRoom,
 } from '../shared/constants.js'
 import { isValidTilePosition } from '../shared/coordinates.js'
 import { COUNTERWEIGHT, isOnPlate, isAtGoal, PLATE_RADIUS } from '../shared/puzzles.js'
@@ -81,6 +81,11 @@ export function attachRooms(io, db) {
       if (!isValidTilePosition({ x, y, z })) return
       const state = players.get(playerId)
       if (!state?.roomId) return
+      if (isFallOutPosition(state.roomId, { z })) {
+        const spawn = fallOutRecoveryPosition(state.roomId)
+        state.x = spawn.x; state.y = spawn.y; state.z = spawn.z; state.facing = facing
+        return
+      }
       const next = clampAllowedRoomPosition(
         state.roomId,
         { x: state.x, y: state.y, z: state.z },
