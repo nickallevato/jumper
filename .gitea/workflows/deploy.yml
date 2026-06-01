@@ -292,7 +292,11 @@ jobs:
           echo "$ECR_PASS" | docker login --username AWS --password-stdin "$REGISTRY"
           export IMAGE_APP="$REGISTRY/jumper-server:$SHA"
           docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml pull
-          docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml up -d
+          # The previous two-container stack (server + client) leaves orphan
+          # containers holding port 80; tear the project down first so the new
+          # single `app` service can bind :80. Named volumes survive `down`.
+          docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml down --remove-orphans
+          docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml up -d --remove-orphans
           docker compose -p jumper -f docker-compose.yml -f docker-compose.aws.yml ps
           REMOTE
 
