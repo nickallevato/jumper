@@ -4,6 +4,7 @@ import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
 import { Sound } from './sound.js'
 import { shouldApplyLocalServerCorrection, reconcilePrediction } from './reconciliation.js'
+import { groundHeightAt, canStepTo, WALK_STEP_TOLERANCE } from './terrain.js'
 import {
   MOVE_SPEED, GRAVITY, ITEM_EFFECTS,
   MIN_JUMP_VEL, JUMP_HOLD_GRAV_FACTOR,
@@ -147,8 +148,20 @@ export class Player {
     // Wall collision uses the nearest tile (round, not floor) so a wall blocks at its
     // drawn edge — tiles render centered on their coordinate, so floor let players walk
     // a half-tile into the visible wall before stopping.
-    if (this._isPassable(nx, this.ty, grid)) this.tx = nx
-    if (this._isPassable(this.tx, ny, grid)) this.ty = ny
+    //
+    // Surface gating: while grounded you cannot WALK up onto a higher surface
+    // (a cliff/ledge) — you must jump. Stepping onto equal or lower ground is
+    // allowed (and you then fall to it). While airborne, only walls block, so
+    // you can jump over and onto raised platforms.
+    const groundGated = this.onGround
+    if (this._isPassable(nx, this.ty, grid) &&
+        (!groundGated || canStepTo(this._platforms, nx, this.ty, this.tz))) {
+      this.tx = nx
+    }
+    if (this._isPassable(this.tx, ny, grid) &&
+        (!groundGated || canStepTo(this._platforms, this.tx, ny, this.tz))) {
+      this.ty = ny
+    }
 
     // Decay timers
     this._coyoteTimer = Math.max(0, this._coyoteTimer - ms)
@@ -218,34 +231,22 @@ export class Player {
       this.vz -= grav
       this.tz += this.vz
 
-      if (this.tz <= 0) {
-        this.tz = 0
+      // Land on the standing surface under our (rounded) tile — 0 on plain
+      // ground, or the platform/ledge height. Only when descending onto it from
+      // above, so a rising jump still passes underneath a higher ledge.
+      const gh = groundHeightAt(this._platforms, this.tx, this.ty)
+      if (this.vz <= 0 && this.tz <= gh && prevTz >= gh) {
+        this.tz = gh
         this.vz = 0
         this._land(now)
-      } else if (this.vz < 0) {
-        // Landing footprint is centered on the platform's tile (round, not floor) so it
-        // matches where the diamond is drawn — otherwise the target sits half a tile off.
-        const fx = Math.round(this.tx)
-        const fy = Math.round(this.ty)
-        for (const p of this._platforms) {
-          if (p.tx === fx && p.ty === fy && prevTz >= p.tz && this.tz < p.tz) {
-            this.tz = p.tz
-            this.vz = 0
-            this._land(now)
-            break
-          }
-        }
       }
     }
 
-    // Fall off platform edge → start coyote grace
-    if (this.onGround && this.tz > 0.01) {
-      const fx = Math.round(this.tx)
-      const fy = Math.round(this.ty)
-      const still = this._platforms.some(p =>
-        p.tx === fx && p.ty === fy && Math.abs(p.tz - this.tz) < 0.05
-      )
-      if (!still) {
+    // Walked off an edge onto a lower surface → leave the ground and fall
+    // (coyote grace lets a late jump still register).
+    if (this.onGround) {
+      const gh = groundHeightAt(this._platforms, this.tx, this.ty)
+      if (this.tz > gh + WALK_STEP_TOLERANCE) {
         this.onGround = false
         this._coyoteTimer = COYOTE_TIME_MS
       }
