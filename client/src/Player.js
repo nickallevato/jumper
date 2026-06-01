@@ -12,7 +12,7 @@ import {
 } from '../../shared/constants.js'
 
 export class Player {
-  constructor(scene, tx, ty, profile, platforms = []) {
+  constructor(scene, tx, ty, profile, platforms = [], contentBounds = null) {
     this.scene     = scene
     this.tx        = tx
     this.ty        = ty
@@ -24,6 +24,7 @@ export class Player {
     this.facing    = 'se'
     this.cosmeticId = profile?.cosmetic_id ?? 1
     this._platforms = platforms
+    this._contentBounds = contentBounds
 
     // Movement-feel state
     this._coyoteTimer    = 0      // ms of coyote grace remaining
@@ -136,16 +137,17 @@ export class Player {
     let dx = dir.dx * speed
     let dy = dir.dy * speed
 
-    const nx = this.tx + dx
-    const ny = this.ty + dy
     const cols = grid[0].length
     const rows = grid.length
+    const bounds = this._contentBounds ?? { minX: 0, minY: 0, maxX: cols - 0.01, maxY: rows - 0.01 }
+    const nx = Math.max(bounds.minX, Math.min(bounds.maxX, this.tx + dx))
+    const ny = Math.max(bounds.minY, Math.min(bounds.maxY, this.ty + dy))
 
     // Wall collision uses the nearest tile (round, not floor) so a wall blocks at its
     // drawn edge — tiles render centered on their coordinate, so floor let players walk
     // a half-tile into the visible wall before stopping.
-    if (nx >= 0 && nx < cols && grid[Math.round(this.ty)]?.[Math.round(nx)] !== 2) this.tx = nx
-    if (ny >= 0 && ny < rows && grid[Math.round(ny)]?.[Math.round(this.tx)] !== 2) this.ty = ny
+    if (this._isPassable(nx, this.ty, grid)) this.tx = nx
+    if (this._isPassable(this.tx, ny, grid)) this.ty = ny
 
     // Decay timers
     this._coyoteTimer = Math.max(0, this._coyoteTimer - ms)
@@ -178,8 +180,12 @@ export class Player {
       } else if (this._isWallSliding && (now - this._lastJumpTap < DOUBLE_TAP_MS)) {
         // Wall kick — double tap while sliding
         this.vz = MIN_JUMP_VEL * 1.1
-        this.tx = this._clampMove(this.tx + this._wallDir.x * WALL_KICK_SPEED, cols)
-        this.ty = this._clampMove(this.ty + this._wallDir.y * WALL_KICK_SPEED, rows)
+        const kx = this._clampMove(this.tx + this._wallDir.x * WALL_KICK_SPEED, 'x', cols)
+        const ky = this._clampMove(this.ty + this._wallDir.y * WALL_KICK_SPEED, 'y', rows)
+        if (this._isPassable(kx, ky, grid)) {
+          this.tx = kx
+          this.ty = ky
+        }
         this._isWallSliding = false
         this._wallKickCooldown = WALL_KICK_COOLDOWN_MS
         this._isCoyoteJump = false
@@ -272,8 +278,30 @@ export class Player {
     }
   }
 
-  _clampMove(v, max) {
+  _isPassable(tx, ty, grid) {
+    return grid[Math.round(ty)]?.[Math.round(tx)] !== 2
+  }
+
+  _clampMove(v, axis, max) {
+    if (this._contentBounds) {
+      const min = axis === 'x' ? this._contentBounds.minX : this._contentBounds.minY
+      const boundMax = axis === 'x' ? this._contentBounds.maxX : this._contentBounds.maxY
+      return Math.max(min, Math.min(boundMax, v))
+    }
     return clampTileCoordinate(v, max)
+  }
+
+  applyServerState({ x, y, z, facing }) {
+    this.tx = x
+    this.ty = y
+    this.tz = z
+    this.facing = facing ?? this.facing
+    if (this.tz <= 0) {
+      this.tz = 0
+      this.vz = 0
+      this.onGround = true
+    }
+    this._syncPosition()
   }
 
   _land(now) {

@@ -12,6 +12,13 @@ import {
   topDiamondPoints,
 } from '../shared/coordinates.js'
 import { MAX_JUMP_HEIGHT, TILE_H } from '../shared/constants.js'
+import {
+  ROOM_CONTENT_BOUNDS,
+  ROOM_SPAWNS,
+  clampAllowedRoomPosition,
+  contentBoundsForRoom,
+  isRoomPositionPassable,
+} from '../shared/constants.js'
 import { ROOMS } from '../client/src/maps.js'
 import { COUNTERWEIGHT } from '../shared/puzzles.js'
 
@@ -192,6 +199,8 @@ describe('iso', () => {
 
   it('room bounds contain all authored traversal coordinates', () => {
     for (const [roomId, room] of Object.entries(ROOMS)) {
+      expect(room.contentBounds, roomId).toEqual(contentBoundsForRoom(roomId))
+      expect(room.spawn, roomId).toEqual(ROOM_SPAWNS[roomId])
       const authoredPoints = [
         room.spawn,
         ...(room.portals ?? []),
@@ -202,8 +211,27 @@ describe('iso', () => {
 
       for (const point of authoredPoints) {
         expect(isInBounds(room, point.tx, point.ty), `${roomId} ${JSON.stringify(point)}`).toBe(true)
+        const bounds = ROOM_CONTENT_BOUNDS[roomId]
+        expect(point.tx, `${roomId} ${JSON.stringify(point)}`).toBeGreaterThanOrEqual(bounds.minX)
+        expect(point.tx, `${roomId} ${JSON.stringify(point)}`).toBeLessThanOrEqual(bounds.maxX)
+        expect(point.ty, `${roomId} ${JSON.stringify(point)}`).toBeGreaterThanOrEqual(bounds.minY)
+        expect(point.ty, `${roomId} ${JSON.stringify(point)}`).toBeLessThanOrEqual(bounds.maxY)
       }
     }
+  })
+
+  it('shared room clamps keep players inside content bounds', () => {
+    expect(clampAllowedRoomPosition(
+      'dungeon_belltower',
+      { x: 2, y: 4, z: 0 },
+      { x: -20, y: 99, z: 99 }
+    )).toEqual({ x: 0.51, y: 4.49, z: 5.4 })
+  })
+
+  it('shared room passability rejects rounded wall footprints', () => {
+    expect(isRoomPositionPassable('overworld', { x: 3.49, y: 2 })).toBe(false)
+    expect(isRoomPositionPassable('dungeon_grove', { x: 9, y: 2 })).toBe(false)
+    expect(isRoomPositionPassable('dungeon_grove', { x: 9, y: 2 }, new Set(['9,2']))).toBe(true)
   })
 
   it('room portals stay reachable from spawn on ground tiles', () => {

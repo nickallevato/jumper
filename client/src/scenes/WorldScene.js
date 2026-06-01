@@ -64,7 +64,7 @@ export class WorldScene extends Phaser.Scene {
       this._drawRiser()
     }
     const spawn = room.spawn ?? { tx: 8, ty: 8 }
-    this.player = new Player(this, spawn.tx, spawn.ty, this.profile, collisionPlatforms)
+    this.player = new Player(this, spawn.tx, spawn.ty, this.profile, collisionPlatforms, room.contentBounds)
 
     // Lantern-revealed hidden platforms: rendered + collidable only while holding a Lantern.
     this._basePlatforms = collisionPlatforms
@@ -76,7 +76,7 @@ export class WorldScene extends Phaser.Scene {
 
     // Tall/large rooms: camera follows the player, clamped to the room's content bounds.
     if (room.follow) {
-      const b = this._computeBounds(originX, originY)
+      const b = this._computeBounds(originX, originY, room.contentBounds)
       this.cameras.main.setBounds(b.x, b.y, b.w, b.h)
       this.cameras.main.startFollow(this.player.gfx, true, 0.12, 0.12)
     }
@@ -147,7 +147,11 @@ export class WorldScene extends Phaser.Scene {
       this._setRoomCount(players.length)
       const seen = new Set()
       for (const p of players) {
-        if (p.id === this.playerId) continue
+        if (p.id === this.playerId) {
+          this.player.applyServerState(p)
+          this._lastState = this.player.getState()
+          continue
+        }
         seen.add(p.id)
         if (this.remotePlayers.has(p.id)) {
           this.remotePlayers.get(p.id).updateTarget(p.x, p.y, p.z, p.cosmeticId)
@@ -312,19 +316,27 @@ export class WorldScene extends Phaser.Scene {
   }
 
   // Screen-space bounding rect covering all tiles + platforms, with margin (for camera clamp).
-  _computeBounds(originX, originY) {
+  _computeBounds(originX, originY, contentBounds = null) {
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
     const consider = (tx, ty, tz) => {
       const { x, y } = toScreen(tx, ty, tz, originX, originY)
       minX = Math.min(minX, x - TILE_W / 2); maxX = Math.max(maxX, x + TILE_W / 2)
       minY = Math.min(minY, y - TILE_H / 2); maxY = Math.max(maxY, y + TILE_H + 40)
     }
-    for (let ty = 0; ty < this.grid.length; ty++)
-      for (let tx = 0; tx < this.grid[ty].length; tx++)
-        if (this.grid[ty][tx]) consider(tx, ty, 0)
-    for (const p of this._basePlatforms) consider(p.tx, p.ty, p.tz)
-    const m = 140
-    return { x: minX - m, y: minY - m, w: (maxX - minX) + 2 * m, h: (maxY - minY) + 2 * m }
+    if (contentBounds) {
+      for (const tx of [contentBounds.minX, contentBounds.maxX]) {
+        for (const ty of [contentBounds.minY, contentBounds.maxY]) {
+          consider(tx, ty, 0)
+          consider(tx, ty, contentBounds.maxZ)
+        }
+      }
+    } else {
+      for (let ty = 0; ty < this.grid.length; ty++)
+        for (let tx = 0; tx < this.grid[ty].length; tx++)
+          if (this.grid[ty][tx]) consider(tx, ty, 0)
+      for (const p of this._basePlatforms) consider(p.tx, p.ty, p.tz)
+    }
+    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
   }
 
   // The bell at the top of the tower — gold; reaching it records secret_bell.

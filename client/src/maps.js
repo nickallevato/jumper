@@ -1,4 +1,5 @@
 import { doorsForRoom } from '../../shared/doors.js'
+import { ROOM_CONTENT_BOUNDS, ROOM_SPAWNS } from '../../shared/constants.js'
 
 // Room registry. Each room defines its tile grid, elevated platforms, spawn point,
 // portals to other rooms, locked doors, and a camera background tint. WorldScene renders
@@ -148,8 +149,9 @@ const LIBRARY_PLATFORMS = [
 export const ROOMS = {
   overworld: {
     grid: OVERWORLD_GRID,
+    contentBounds: ROOM_CONTENT_BOUNDS.overworld,
     platforms: OVERWORLD_PLATFORMS,
-    spawn: { tx: 8, ty: 8 },
+    spawn: ROOM_SPAWNS.overworld,
     bg: '#1a1a2e',
     portals: [
       { tx: 13, ty: 13, to: 'dungeon_grove' },
@@ -161,8 +163,9 @@ export const ROOMS = {
   },
   dungeon_grove: {
     grid: GROVE_GRID,
+    contentBounds: ROOM_CONTENT_BOUNDS.dungeon_grove,
     platforms: GROVE_PLATFORMS,
-    spawn: { tx: 8, ty: 8 },
+    spawn: ROOM_SPAWNS.dungeon_grove,
     bg: '#0c1422',
     portals: [{ tx: 2, ty: 2, to: 'overworld' }],
     doors: doorsForRoom('dungeon_grove'),
@@ -176,8 +179,9 @@ export const ROOMS = {
   },
   dungeon_belltower: {
     grid: BELLTOWER_GRID,
+    contentBounds: ROOM_CONTENT_BOUNDS.dungeon_belltower,
     platforms: BELLTOWER_PLATFORMS,
-    spawn: { tx: 2, ty: 4 },
+    spawn: ROOM_SPAWNS.dungeon_belltower,
     bg: '#13111c',
     portals: [{ tx: 4, ty: 4, to: 'overworld' }],
     follow: true,                              // tall room — camera follows the player
@@ -185,8 +189,9 @@ export const ROOMS = {
   },
   dungeon_library: {
     grid: LIBRARY_GRID,
+    contentBounds: ROOM_CONTENT_BOUNDS.dungeon_library,
     platforms: LIBRARY_PLATFORMS,
-    spawn: { tx: 5, ty: 8 },
+    spawn: ROOM_SPAWNS.dungeon_library,
     bg: '#0a0a14',
     portals: [{ tx: 1, ty: 1, to: 'overworld' }],
     follow: true,
