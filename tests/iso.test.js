@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   ISO_ANCHOR_CONVENTION,
   blockFacePoints,
+  clampTileCoordinate,
   isValidTilePosition,
   paintOrder,
   screenToTile,
@@ -10,6 +11,45 @@ import {
   toWorld,
   topDiamondPoints,
 } from '../shared/coordinates.js'
+import { TILE_H } from '../shared/constants.js'
+import { ROOMS } from '../client/src/maps.js'
+
+const MAX_JUMP_HEIGHT = 1.27
+
+function isWalkableTile(room, tx, ty) {
+  return room.grid[ty]?.[tx] === 1 || room.grid[ty]?.[tx] === 3
+}
+
+function roomSize(room) {
+  return {
+    cols: room.grid[0].length,
+    rows: room.grid.length,
+  }
+}
+
+function isInBounds(room, tx, ty) {
+  const { cols, rows } = roomSize(room)
+  return tx >= 0 && ty >= 0 && tx < cols && ty < rows
+}
+
+function reachableGroundTiles(room, start) {
+  const startKey = `${start.tx},${start.ty}`
+  const seen = new Set([startKey])
+  const queue = [start]
+
+  while (queue.length > 0) {
+    const cur = queue.shift()
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const next = { tx: cur.tx + dx, ty: cur.ty + dy }
+      const key = `${next.tx},${next.ty}`
+      if (seen.has(key) || !isWalkableTile(room, next.tx, next.ty)) continue
+      seen.add(key)
+      queue.push(next)
+    }
+  }
+
+  return seen
+}
 
 // TILE_W=64, TILE_H=32. ORIGIN assumed (0,0) for math tests.
 describe('iso', () => {
@@ -57,6 +97,30 @@ describe('iso', () => {
       expect(t.tx).toBeCloseTo(c.tx)
       expect(t.ty).toBeCloseTo(c.ty)
     }
+  })
+
+  it('screenToTile: z-aware screen points round-trip after height compensation', () => {
+    const origin = { x: -128, y: 96 }
+    const cases = [
+      { tx: 0, ty: 0, tz: 0 },
+      { tx: 7, ty: 5, tz: 1 },
+      { tx: 4.25, ty: 9.5, tz: 2.75 },
+      { tx: -3.5, ty: 6.25, tz: 0.5 },
+    ]
+
+    for (const c of cases) {
+      const s = toScreen(c.tx, c.ty, c.tz, origin.x, origin.y)
+      const t = screenToTile(s.x, s.y + c.tz * TILE_H, origin.x, origin.y)
+      expect(t.tx).toBeCloseTo(c.tx)
+      expect(t.ty).toBeCloseTo(c.ty)
+    }
+  })
+
+  it('clampTileCoordinate keeps movement inside room tile bounds', () => {
+    expect(clampTileCoordinate(-0.5, 16)).toBe(0)
+    expect(clampTileCoordinate(8.25, 16)).toBe(8.25)
+    expect(clampTileCoordinate(16, 16)).toBe(15.99)
+    expect(clampTileCoordinate(99, 16)).toBe(15.99)
   })
 
   it('documents entity base anchor convention', () => {
@@ -117,5 +181,51 @@ describe('iso', () => {
     expect(isValidTilePosition({ x: Infinity, y: 8, z: 0 })).toBe(false)
     expect(isValidTilePosition({ x: 3000, y: 8, z: 0 })).toBe(false)
     expect(isValidTilePosition({ x: 8, y: 8, z: 100 })).toBe(false)
+  })
+
+  it('room spawns are in bounds and on solid ground', () => {
+    for (const [roomId, room] of Object.entries(ROOMS)) {
+      expect(room.spawn, roomId).toBeDefined()
+      expect(isInBounds(room, room.spawn.tx, room.spawn.ty), roomId).toBe(true)
+      expect(room.grid[room.spawn.ty][room.spawn.tx], roomId).toBe(1)
+    }
+  })
+
+  it('room bounds contain all authored traversal coordinates', () => {
+    for (const [roomId, room] of Object.entries(ROOMS)) {
+      const authoredPoints = [
+        room.spawn,
+        ...(room.portals ?? []),
+        ...(room.platforms ?? []),
+        ...(room.hidden ?? []),
+        ...(room.doors ?? []),
+      ]
+
+      for (const point of authoredPoints) {
+        expect(isInBounds(room, point.tx, point.ty), `${roomId} ${JSON.stringify(point)}`).toBe(true)
+      }
+    }
+  })
+
+  it('room portals stay reachable from spawn on ground tiles', () => {
+    for (const [roomId, room] of Object.entries(ROOMS)) {
+      const reachable = reachableGroundTiles(room, room.spawn)
+
+      for (const portal of room.portals ?? []) {
+        expect(reachable.has(`${portal.tx},${portal.ty}`), `${roomId} portal ${portal.tx},${portal.ty}`).toBe(true)
+      }
+    }
+  })
+
+  it('authored platform chains preserve intentional reachability', () => {
+    for (const [roomId, room] of Object.entries(ROOMS)) {
+      let current = { tx: room.spawn.tx, ty: room.spawn.ty, tz: 0 }
+
+      for (const platform of room.platforms ?? []) {
+        const dz = platform.tz - current.tz
+        expect(dz, `${roomId} platform ${platform.tx},${platform.ty},${platform.tz}`).toBeLessThanOrEqual(MAX_JUMP_HEIGHT)
+        current = platform
+      }
+    }
   })
 })

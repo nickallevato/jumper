@@ -24,6 +24,10 @@ export function screenToTile(screenX, screenY, originX = 0, originY = 0) {
 
 export const toWorld = screenToTile
 
+export function clampTileCoordinate(value, max) {
+  return Math.max(0, Math.min(max - 0.01, value))
+}
+
 // Sort an array of objects with tx/ty properties back-to-front for painter's order.
 export function paintOrder(tiles) {
   return [...tiles].sort((a, b) => (a.tx + a.ty) - (b.tx + b.ty))

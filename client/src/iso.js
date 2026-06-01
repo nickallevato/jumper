@@ -3,6 +3,7 @@ export {
   TILE_HH,
   TILE_HW,
   blockFacePoints,
+  clampTileCoordinate,
   isValidTilePosition,
   paintOrder,
   screenToTile,

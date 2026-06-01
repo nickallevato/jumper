@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { toScreen, screenToTileDir } from '../../shared/coordinates.js'
+import { clampTileCoordinate, toScreen, screenToTileDir } from '../../shared/coordinates.js'
 import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
 import { Sound } from './sound.js'
@@ -273,7 +273,7 @@ export class Player {
   }
 
   _clampMove(v, max) {
-    return Math.max(0, Math.min(max - 0.01, v))
+    return clampTileCoordinate(v, max)
   }
 
   _land(now) {
