@@ -3,6 +3,7 @@ import { getProfile } from './profile.js'
 import { getWorldItems, pickupItem, dropItem, useItem } from './items.js'
 import { checkDiscovery } from './secrets.js'
 import { TICK_MS, ROOM_CAP_SMALL, BOUNCE_VEL, SOCKET_EVENTS as E } from '../shared/constants.js'
+import { isValidTilePosition } from '../shared/coordinates.js'
 import { COUNTERWEIGHT, isOnPlate, isAtGoal, PLATE_RADIUS } from '../shared/puzzles.js'
 import { findDoorNear } from '../shared/doors.js'
 
@@ -72,6 +73,7 @@ export function attachRooms(io, db) {
 
     socket.on(S.MOVE, ({ x, y, z, facing }) => {
       if (!playerId) return
+      if (!isValidTilePosition({ x, y, z })) return
       const state = players.get(playerId)
       state.x = x; state.y = y; state.z = z; state.facing = facing
     })

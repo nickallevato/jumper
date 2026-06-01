@@ -1,5 +1,5 @@
-import { toScreen } from './iso.js'
-import { TILE_W, TILE_H } from '../../shared/constants.js'
+import { blockFacePoints, paintOrder, toScreen } from '../../shared/coordinates.js'
+import { TILE_H } from '../../shared/constants.js'
 
 const STYLES = {
   1: { top: 0x4c8b5e, left: 0x2d5c3b, right: 0x1b3c26, depth: 10 },
@@ -58,13 +58,13 @@ export class IsoMap {
       all.push({ tx: p.tx, ty: p.ty, tz: p.tz, type: p.type ?? 4 })
     }
 
-    // Back-to-front: lower tx+ty first; same sum → lower tz first
-    all.sort((a, b) => {
+    // Back-to-front: lower tx+ty first; same sum -> lower tz first
+    const ordered = paintOrder(all).sort((a, b) => {
       const d = (a.tx + a.ty) - (b.tx + b.ty)
       return d !== 0 ? d : a.tz - b.tz
     })
 
-    for (const tile of all) {
+    for (const tile of ordered) {
       const style = STYLES[tile.type]
       if (!style) continue
       const { x, y } = toScreen(tile.tx, tile.ty, tile.tz, this.originX, this.originY)
@@ -80,32 +80,16 @@ export class IsoMap {
   }
 
   _drawTile(g, sx, sy, style, depth, topColor) {
-    const hw = TILE_W / 2
-    const hh = TILE_H / 2
     const D  = depth ?? style.depth
+    const faces = blockFacePoints(sx, sy, D)
 
     g.fillStyle(style.left, 1)
-    g.fillPoints([
-      { x: sx - hw, y: sy },
-      { x: sx,      y: sy + hh },
-      { x: sx,      y: sy + hh + D },
-      { x: sx - hw, y: sy + D },
-    ], true)
+    g.fillPoints(faces.left, true)
 
     g.fillStyle(style.right, 1)
-    g.fillPoints([
-      { x: sx,      y: sy + hh },
-      { x: sx + hw, y: sy },
-      { x: sx + hw, y: sy + D },
-      { x: sx,      y: sy + hh + D },
-    ], true)
+    g.fillPoints(faces.right, true)
 
     g.fillStyle(topColor ?? style.top, 1)
-    g.fillPoints([
-      { x: sx,      y: sy - hh },
-      { x: sx + hw, y: sy },
-      { x: sx,      y: sy + hh },
-      { x: sx - hw, y: sy },
-    ], true)
+    g.fillPoints(faces.top, true)
   }
 }

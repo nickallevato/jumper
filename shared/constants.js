@@ -1,6 +1,8 @@
 export const TICK_MS = 50             // 20 ticks/sec
 export const TILE_W = 64
 export const TILE_H = 32
+export const MAX_POSITION_ABS = 2048
+export const MAX_Z_ABS = 64
 export const MOVE_SPEED = 6           // tiles per second
 export const JUMP_VELOCITY = 0.30     // tiles/tick upward (legacy / item baseline)
 export const GRAVITY = 0.022          // tiles/tick² downward

@@ -3,7 +3,7 @@ import { IsoMap } from '../IsoMap.js'
 import { Player } from '../Player.js'
 import { RemotePlayer } from '../RemotePlayer.js'
 import { getSocket } from '../net.js'
-import { toScreen } from '../iso.js'
+import { blockFacePoints, toScreen, topDiamondPoints } from '../../../shared/coordinates.js'
 import { SOCKET_EVENTS as E, TILE_H, TILE_W } from '../../../shared/constants.js'
 import { COUNTERWEIGHT } from '../../../shared/puzzles.js'
 import { cosmeticIdForUnlock } from '../../../shared/cosmetics.js'
@@ -254,8 +254,7 @@ export class WorldScene extends Phaser.Scene {
 
   // Door markers: a distinct banded diamond on the closed door tile so it reads as a door.
   _drawDoors(originX, originY) {
-    const hw = TILE_W / 2, hh = TILE_H / 2
-    const diamond = [{ x: 0, y: -hh }, { x: hw, y: 0 }, { x: 0, y: hh }, { x: -hw, y: 0 }]
+    const diamond = topDiamondPoints()
     for (const d of this.doors) {
       const { x, y } = toScreen(d.tx, d.ty, 0, originX, originY)
       const g = this.add.graphics()
@@ -284,16 +283,12 @@ export class WorldScene extends Phaser.Scene {
   // Bright sunken plate — visually invites stepping/dropping; pulses to read as interactive.
   _drawPlate(originX, originY) {
     const { x, y } = toScreen(this._plate.tx, this._plate.ty, 0, originX, originY)
-    const hw = TILE_W / 2, hh = TILE_H / 2
+    const diamond = topDiamondPoints()
     const g = this.add.graphics()
     g.fillStyle(0xf9e2af, 1)
-    g.fillPoints([
-      { x: 0, y: -hh }, { x: hw, y: 0 }, { x: 0, y: hh }, { x: -hw, y: 0 },
-    ], true)
+    g.fillPoints(diamond, true)
     g.lineStyle(2, 0xdba90a, 1)
-    g.strokePoints([
-      { x: 0, y: -hh }, { x: hw, y: 0 }, { x: 0, y: hh }, { x: -hw, y: 0 },
-    ], true)
+    g.strokePoints(diamond, true)
     g.setPosition(x, y)
     this.tweens.add({ targets: g, alpha: { from: 0.55, to: 1 }, duration: 900, yoyo: true, repeat: -1 })
   }
@@ -305,21 +300,15 @@ export class WorldScene extends Phaser.Scene {
     const g = this._riserGfx
     g.clear()
     const { x, y } = toScreen(this.riser.tx, this.riser.ty, this.riser.tz, originX, originY)
-    const hw = TILE_W / 2, hh = TILE_H / 2
     const D = Math.max(10, this.riser.tz * TILE_H + 10)   // pillar side height grows with rise
+    const faces = blockFacePoints(x, y, D)
 
     g.fillStyle(0x8a6d3b, 1)   // left face
-    g.fillPoints([
-      { x: x - hw, y }, { x, y: y + hh }, { x, y: y + hh + D }, { x: x - hw, y: y + D },
-    ], true)
+    g.fillPoints(faces.left, true)
     g.fillStyle(0x5e4827, 1)   // right face
-    g.fillPoints([
-      { x, y: y + hh }, { x: x + hw, y }, { x: x + hw, y: y + D }, { x, y: y + hh + D },
-    ], true)
+    g.fillPoints(faces.right, true)
     g.fillStyle(0xc79a5b, 1)   // top
-    g.fillPoints([
-      { x, y: y - hh }, { x: x + hw, y }, { x, y: y + hh }, { x: x - hw, y },
-    ], true)
+    g.fillPoints(faces.top, true)
   }
 
   // Screen-space bounding rect covering all tiles + platforms, with margin (for camera clamp).
@@ -356,14 +345,14 @@ export class WorldScene extends Phaser.Scene {
   _drawHidden(p, originX, originY) {
     const g = this.add.graphics()
     const { x, y } = toScreen(p.tx, p.ty, p.tz, originX, originY)
-    const hw = TILE_W / 2, hh = TILE_H / 2
     const D = Math.max(10, p.tz * TILE_H + 10)
+    const faces = blockFacePoints(x, y, D)
     g.fillStyle(0x94e2d5, 0.32)
-    g.fillPoints([{ x: x - hw, y }, { x, y: y + hh }, { x, y: y + hh + D }, { x: x - hw, y: y + D }], true)
+    g.fillPoints(faces.left, true)
     g.fillStyle(0x74c7ec, 0.32)
-    g.fillPoints([{ x, y: y + hh }, { x: x + hw, y }, { x: x + hw, y: y + D }, { x, y: y + hh + D }], true)
+    g.fillPoints(faces.right, true)
     g.fillStyle(0xb9f2e6, 0.6)
-    g.fillPoints([{ x, y: y - hh }, { x: x + hw, y }, { x, y: y + hh }, { x: x - hw, y }], true)
+    g.fillPoints(faces.top, true)
     g.setVisible(false)
     return g
   }
@@ -384,8 +373,7 @@ export class WorldScene extends Phaser.Scene {
       dungeon_library:   { fill: 0xcba6f7, line: 0xf5c2e7 },  // violet
       overworld:         { fill: 0x89dceb, line: 0xbfeaf2 },  // sky (return)
     }
-    const hw = TILE_W / 2, hh = TILE_H / 2
-    const diamond = [{ x: 0, y: -hh }, { x: hw, y: 0 }, { x: 0, y: hh }, { x: -hw, y: 0 }]
+    const diamond = topDiamondPoints()
     for (const portal of this.portals) {
       const c = COLORS[portal.to] ?? COLORS.overworld
       const { x, y } = toScreen(portal.tx, portal.ty, 0, originX, originY)

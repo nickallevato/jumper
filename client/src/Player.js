@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { toScreen, screenToTileDir } from './iso.js'
+import { toScreen, screenToTileDir } from '../../shared/coordinates.js'
 import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
 import { Sound } from './sound.js'

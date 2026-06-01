@@ -1,4 +1,4 @@
-import { toScreen } from './iso.js'
+import { toScreen } from '../../shared/coordinates.js'
 import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
 
