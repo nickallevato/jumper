@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { COUNTERWEIGHT, isOnPlate, isAtGoal } from '../shared/puzzles.js'
+import { MAX_JUMP_HEIGHT } from '../shared/constants.js'
 
 describe('counterweight geometry', () => {
   const { plate, goal, riser } = COUNTERWEIGHT
@@ -25,8 +26,8 @@ describe('counterweight geometry', () => {
   })
 
   it('goal is unreachable from the ground but reachable off the raised riser', () => {
-    const MAX_JUMP = 1.27 // approx max variable-jump height (see movement spec)
-    expect(riser.loweredZ + MAX_JUMP).toBeLessThan(goal.tz)      // not from ground
-    expect(riser.raisedZ + MAX_JUMP).toBeGreaterThanOrEqual(goal.reachZ) // yes from riser
+    expect(riser.loweredZ + MAX_JUMP_HEIGHT).toBeLessThan(goal.tz)      // not from ground
+    expect(riser.raisedZ + MAX_JUMP_HEIGHT).toBeGreaterThanOrEqual(goal.tz) // yes from riser
+    expect(riser.raisedZ + MAX_JUMP_HEIGHT).toBeGreaterThanOrEqual(goal.reachZ)
   })
 })

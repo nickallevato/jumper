@@ -11,10 +11,9 @@ import {
   toWorld,
   topDiamondPoints,
 } from '../shared/coordinates.js'
-import { TILE_H } from '../shared/constants.js'
+import { MAX_JUMP_HEIGHT, TILE_H } from '../shared/constants.js'
 import { ROOMS } from '../client/src/maps.js'
-
-const MAX_JUMP_HEIGHT = 1.27
+import { COUNTERWEIGHT } from '../shared/puzzles.js'
 
 function isWalkableTile(room, tx, ty) {
   return room.grid[ty]?.[tx] === 1 || room.grid[ty]?.[tx] === 3
@@ -227,5 +226,50 @@ describe('iso', () => {
         current = platform
       }
     }
+  })
+
+  it('max normal jump height covers each authored gated z step', () => {
+    const paths = []
+
+    for (const [roomId, room] of Object.entries(ROOMS)) {
+      if (room.platforms?.length) {
+        paths.push({
+          name: `${roomId} visible platforms`,
+          points: [{ tx: room.spawn.tx, ty: room.spawn.ty, tz: 0 }, ...room.platforms],
+        })
+      }
+
+      if (room.hidden?.length) {
+        const visibleStart = room.platforms?.at(-1) ?? { tx: room.spawn.tx, ty: room.spawn.ty, tz: 0 }
+        paths.push({
+          name: `${roomId} hidden platforms`,
+          points: [visibleStart, ...room.hidden],
+        })
+      }
+    }
+
+    paths.push({
+      name: 'overworld counterweight riser to goal',
+      points: [
+        { tx: COUNTERWEIGHT.riser.tx, ty: COUNTERWEIGHT.riser.ty, tz: COUNTERWEIGHT.riser.raisedZ },
+        COUNTERWEIGHT.goal,
+      ],
+    })
+
+    for (const path of paths) {
+      for (let i = 1; i < path.points.length; i++) {
+        const from = path.points[i - 1]
+        const to = path.points[i]
+        const dz = to.tz - from.tz
+        expect(dz, `${path.name}: ${from.tz} -> ${to.tz} at ${to.tx},${to.ty}`).toBeLessThanOrEqual(MAX_JUMP_HEIGHT)
+      }
+    }
+  })
+
+  it('counterweight goal remains gated by z height, not horizontal reach alone', () => {
+    const { riser, goal } = COUNTERWEIGHT
+
+    expect(riser.loweredZ + MAX_JUMP_HEIGHT).toBeLessThan(goal.tz)
+    expect(riser.raisedZ + MAX_JUMP_HEIGHT).toBeGreaterThanOrEqual(goal.tz)
   })
 })

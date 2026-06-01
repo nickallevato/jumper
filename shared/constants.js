@@ -11,6 +11,7 @@ export const ROOM_CAP_DUNGEON = 50
 
 // --- Movement & feel ---
 export const MIN_JUMP_VEL = 0.14            // base jump impulse (tap = short hop)
+export const MAX_JUMP_HEIGHT = 1.27         // approx max variable-jump height in tile-z units
 export const JUMP_HOLD_GRAV_FACTOR = 0.35   // gravity multiplier while holding on ascent
 export const COYOTE_VEL = 0.16              // fixed coyote-jump impulse (no hold bonus)
 export const COYOTE_TIME_MS = 120           // grace window after leaving a ledge
