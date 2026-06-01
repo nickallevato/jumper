@@ -9,12 +9,18 @@ import { COUNTERWEIGHT } from '../../../shared/puzzles.js'
 import { cosmeticIdForUnlock } from '../../../shared/cosmetics.js'
 import { getRoom } from '../maps.js'
 import { Sound } from '../sound.js'
+import { pruneAckedInputs } from '../reconciliation.js'
 
 export class WorldScene extends Phaser.Scene {
   constructor() {
     super('WorldScene')
     this._pickupCooldown = 0
     this._itemBobTime = 0
+    // Client-side prediction: monotonically increasing input sequence and the
+    // buffer of positions predicted for each MOVE we have sent but the server
+    // has not yet acknowledged.
+    this._inputSeq = 0
+    this._pendingInputs = []
   }
 
   create(data) {
@@ -148,7 +154,8 @@ export class WorldScene extends Phaser.Scene {
       const seen = new Set()
       for (const p of players) {
         if (p.id === this.playerId) {
-          this.player.reconcileServerState(p)
+          this.player.reconcileFromServer(p, this._pendingInputs)
+          this._pendingInputs = pruneAckedInputs(this._pendingInputs, p.seq)
           this._lastState = this.player.getState()
           continue
         }
@@ -470,7 +477,12 @@ export class WorldScene extends Phaser.Scene {
     const state = this.player.getState()
     const last = this._lastState
     if (!last || state.x !== last.x || state.y !== last.y || state.z !== last.z || state.facing !== last.facing) {
-      this._socket.emit(E.MOVE, state)
+      const seq = ++this._inputSeq
+      this._socket.emit(E.MOVE, { ...state, seq })
+      // Record what we predicted for this input so a later server ack can be
+      // compared against it rather than against our (further-ahead) position.
+      this._pendingInputs.push({ seq, x: state.x, y: state.y, z: state.z })
+      if (this._pendingInputs.length > 180) this._pendingInputs.shift()
       this._lastState = state
     }
 

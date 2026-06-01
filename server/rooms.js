@@ -76,11 +76,14 @@ export function attachRooms(io, db) {
       socket.emit(S.ITEM_HELD, { item: heldItemInfo(db, playerId) })
     })
 
-    socket.on(S.MOVE, ({ x, y, z, facing }) => {
+    socket.on(S.MOVE, ({ x, y, z, facing, seq }) => {
       if (!playerId) return
       if (!isValidTilePosition({ x, y, z })) return
       const state = players.get(playerId)
       if (!state?.roomId) return
+      // Record the last input we processed so the client can reconcile its
+      // prediction against the exact input this authoritative state reflects.
+      if (typeof seq === 'number') state.lastSeq = seq
       if (isFallOutPosition(state.roomId, { z })) {
         const spawn = fallOutRecoveryPosition(state.roomId)
         state.x = spawn.x; state.y = spawn.y; state.z = spawn.z; state.facing = facing
@@ -177,7 +180,7 @@ export function attachRooms(io, db) {
 
     for (const [roomId, list] of byRoom) {
       const playerList = list.map(([id, p]) => ({
-        id, x: p.x, y: p.y, z: p.z, facing: p.facing, cosmeticId: p.cosmeticId,
+        id, x: p.x, y: p.y, z: p.z, facing: p.facing, cosmeticId: p.cosmeticId, seq: p.lastSeq,
       }))
       io.to(roomId).emit(S.TICK, { players: playerList })
     }

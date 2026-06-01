@@ -3,7 +3,7 @@ import { clampTileCoordinate, toScreen, screenToTileDir } from '../../shared/coo
 import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
 import { Sound } from './sound.js'
-import { shouldApplyLocalServerCorrection } from './reconciliation.js'
+import { shouldApplyLocalServerCorrection, reconcilePrediction } from './reconciliation.js'
 import {
   MOVE_SPEED, GRAVITY, ITEM_EFFECTS,
   MIN_JUMP_VEL, JUMP_HOLD_GRAV_FACTOR,
@@ -312,6 +312,37 @@ export class Player {
     }
     this.applyServerState(state)
     return true
+  }
+
+  // Ack-based reconciliation against the client's own predicted inputs.
+  // The server tags its authoritative state with the last input seq it
+  // processed; we compare that against the position we predicted for that same
+  // input, NOT our current position. When the server accepted the move (the
+  // common case — client and server clamp identically), there is no divergence
+  // and we leave the locally-predicted position untouched: no rubber-banding.
+  // Only a genuine server correction (wall/bounds/fall-out the client did not
+  // predict) yields an offset, which we add to the current position so the
+  // correction lands while the un-acked predicted movement is preserved.
+  reconcileFromServer(serverState, pendingInputs) {
+    this.facing = serverState.facing ?? this.facing
+    const r = reconcilePrediction(serverState, pendingInputs)
+    if (r.matched) {
+      if (r.apply) {
+        this.tx += r.correction.dx
+        this.ty += r.correction.dy
+        this.tz += r.correction.dz
+        if (this.tz <= 0) {
+          this.tz = 0
+          this.vz = 0
+          this.onGround = true
+        }
+        this._syncPosition()
+      }
+      return r.apply
+    }
+    // No usable ack (server sent no seq, or it is not in our buffer): fall back
+    // to the threshold guard so a large genuine divergence still snaps.
+    return this.reconcileServerState(serverState)
   }
 
   _land(now) {
