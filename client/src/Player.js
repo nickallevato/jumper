@@ -3,6 +3,7 @@ import { clampTileCoordinate, toScreen, screenToTileDir } from '../../shared/coo
 import { cosmeticById } from '../../shared/cosmetics.js'
 import { showEmoteAbove } from './emote.js'
 import { Sound } from './sound.js'
+import { shouldApplyLocalServerCorrection } from './reconciliation.js'
 import {
   MOVE_SPEED, GRAVITY, ITEM_EFFECTS,
   MIN_JUMP_VEL, JUMP_HOLD_GRAV_FACTOR,
@@ -302,6 +303,15 @@ export class Player {
       this.onGround = true
     }
     this._syncPosition()
+  }
+
+  reconcileServerState(state) {
+    this.facing = state.facing ?? this.facing
+    if (!shouldApplyLocalServerCorrection(this, state)) {
+      return false
+    }
+    this.applyServerState(state)
+    return true
   }
 
   _land(now) {

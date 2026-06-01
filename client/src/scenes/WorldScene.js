@@ -148,7 +148,7 @@ export class WorldScene extends Phaser.Scene {
       const seen = new Set()
       for (const p of players) {
         if (p.id === this.playerId) {
-          this.player.applyServerState(p)
+          this.player.reconcileServerState(p)
           this._lastState = this.player.getState()
           continue
         }
