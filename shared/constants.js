@@ -22,6 +22,9 @@ export const ROOM_CONTENT_BOUNDS = {
   dungeon_library: {
     minX: 0.51, minY: 0.51, maxX: 8.49, maxY: 8.49, minZ: 0, maxZ: 3.9,
   },
+  dungeon_deep: {
+    minX: 0.51, minY: 0.51, maxX: 6.49, maxY: 10.49, minZ: 0, maxZ: 2.4,
+  },
 }
 
 export const ROOM_SPAWNS = {
@@ -29,6 +32,7 @@ export const ROOM_SPAWNS = {
   dungeon_grove: { tx: 8, ty: 8 },
   dungeon_belltower: { tx: 2, ty: 4 },
   dungeon_library: { tx: 5, ty: 8 },
+  dungeon_deep: { tx: 3, ty: 1 },
 }
 
 const ROOM_WALL_TILES = {
@@ -47,6 +51,7 @@ const ROOM_WALL_TILES = {
   ]),
   dungeon_belltower: new Set(),
   dungeon_library: new Set(),
+  dungeon_deep: new Set(),
 }
 
 export function contentBoundsForRoom(roomId) {

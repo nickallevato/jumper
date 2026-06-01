@@ -146,6 +146,31 @@ const LIBRARY_PLATFORMS = [
   { tx: 2, ty: 4, tz: 2.7 },
 ]
 
+// The Undercroft — a compact deep-room audit map. The route trends down-screen through
+// staggered ledges while authored tz values stay non-negative for the current physics.
+const DEEP_GRID = [
+  [2,2,2,2,2,2,2,2],
+  [2,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,2],
+  [2,1,1,1,1,1,1,2],
+  [2,2,2,2,2,2,2,2],
+]
+
+const DEEP_PLATFORMS = [
+  { tx: 3, ty: 3, tz: 0.6 },
+  { tx: 4, ty: 5, tz: 1.2 },
+  { tx: 2, ty: 7, tz: 0.8 },
+  { tx: 4, ty: 8, tz: 1.8 },
+  { tx: 4, ty: 10, tz: 2.4 },
+]
+
 export const ROOMS = {
   overworld: {
     grid: OVERWORLD_GRID,
@@ -201,6 +226,15 @@ export const ROOMS = {
       { tx: 4, ty: 4, tz: 3.9 },
       { tx: 5, ty: 4, tz: 3.9 },   // archive ledge → secret_archivist (move here w/ Lantern)
     ],
+  },
+  dungeon_deep: {
+    grid: DEEP_GRID,
+    contentBounds: ROOM_CONTENT_BOUNDS.dungeon_deep,
+    platforms: DEEP_PLATFORMS,
+    spawn: ROOM_SPAWNS.dungeon_deep,
+    bg: '#080911',
+    portals: [{ tx: 4, ty: 1, to: 'overworld' }],
+    follow: true,
   },
 }
 

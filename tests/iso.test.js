@@ -244,6 +244,26 @@ describe('iso', () => {
     }
   })
 
+  it('dungeon_deep is an authored follow-camera descent room', () => {
+    const room = ROOMS.dungeon_deep
+    expect(room).toBeDefined()
+    expect(room).not.toBe(ROOMS.overworld)
+    expect(room.contentBounds).toEqual(ROOM_CONTENT_BOUNDS.dungeon_deep)
+    expect(room.spawn).toEqual(ROOM_SPAWNS.dungeon_deep)
+    expect(room.follow).toBe(true)
+    expect(room.portals).toEqual([{ tx: 4, ty: 1, to: 'overworld' }])
+
+    const authoredHeights = new Set(room.platforms.map(p => p.tz))
+    expect(authoredHeights.size).toBeGreaterThanOrEqual(4)
+
+    let previousScreenY = toScreen(room.spawn.tx, room.spawn.ty, 0, 0, 0).y
+    for (const platform of room.platforms) {
+      const screenY = toScreen(platform.tx, platform.ty, platform.tz, 0, 0).y
+      expect(screenY, JSON.stringify(platform)).toBeGreaterThan(previousScreenY)
+      previousScreenY = screenY
+    }
+  })
+
   it('authored platform chains preserve intentional reachability', () => {
     for (const [roomId, room] of Object.entries(ROOMS)) {
       let current = { tx: room.spawn.tx, ty: room.spawn.ty, tz: 0 }
