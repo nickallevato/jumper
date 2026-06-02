@@ -5,7 +5,7 @@ import { checkDiscovery } from './secrets.js'
 import {
   SERVER_SIMULATION_STEP_MS, SERVER_BROADCAST_MS, SERVER_LOOP_POLL_MS,
   ROOM_CAP_SMALL, BOUNCE_VEL, SOCKET_EVENTS as E,
-  clampAllowedRoomPosition, fallOutRecoveryPosition, isFallOutPosition, landingForPortalTransition,
+  clampAllowedRoomPosition, fallOutRecoveryPosition, isFallOutPosition, landingForPortalTransition, spawnForRoom,
 } from '../shared/constants.js'
 import { isValidTilePosition } from '../shared/coordinates.js'
 import { COUNTERWEIGHT, isOnPlate, isAtGoal, PLATE_RADIUS } from '../shared/puzzles.js'
@@ -13,9 +13,17 @@ import { findDoorNear } from '../shared/doors.js'
 
 const S = E
 export const POST_JOIN_MOVE_GRACE_MS = 250
+const POSITION_EPSILON = 0.001
 
-export function shouldIgnorePostJoinMove(state, now = Date.now()) {
-  return Number.isFinite(state?.ignoreMovesUntil) && now < state.ignoreMovesUntil
+function samePosition(a, b) {
+  return Math.abs((a?.x ?? 0) - (b?.x ?? 0)) <= POSITION_EPSILON &&
+    Math.abs((a?.y ?? 0) - (b?.y ?? 0)) <= POSITION_EPSILON &&
+    Math.abs((a?.z ?? 0) - (b?.z ?? 0)) <= POSITION_EPSILON
+}
+
+export function shouldIgnorePostJoinMove(state, now = Date.now(), move = null) {
+  if (Number.isFinite(state?.ignoreMovesUntil) && now < state.ignoreMovesUntil) return true
+  return !!(move && state?.ignoreSpawnMove && samePosition(move, state.ignoreSpawnMove))
 }
 
 // The item a player currently holds (or null), for private held-state sync.
@@ -64,10 +72,14 @@ export function attachRooms(io, db) {
       state.roomId = roomId
       const portalRef = previousRoomId === fromPortal?.roomId ? fromPortal : null
       const landing = landingForPortalTransition(roomId, portalRef)
+      const spawn = spawnForRoom(roomId)
       state.x = landing.tx; state.y = landing.ty; state.z = 0
       state.warpId = (state.warpId ?? 0) + 1
       state.lastSeq = undefined
       state.ignoreMovesUntil = Date.now() + POST_JOIN_MOVE_GRACE_MS
+      state.ignoreSpawnMove = portalRef && (landing.tx !== spawn.tx || landing.ty !== spawn.ty)
+        ? { x: spawn.tx, y: spawn.ty, z: 0 }
+        : null
       socket.join(roomId)
 
       const roomPlayers = [...players.entries()]
@@ -93,7 +105,8 @@ export function attachRooms(io, db) {
       if (!isValidTilePosition({ x, y, z })) return
       const state = players.get(playerId)
       if (!state?.roomId) return
-      if (shouldIgnorePostJoinMove(state)) return
+      if (shouldIgnorePostJoinMove(state, Date.now(), { x, y, z })) return
+      state.ignoreSpawnMove = null
       // Record the last input we processed so the client can reconcile its
       // prediction against the exact input this authoritative state reflects.
       if (typeof seq === 'number') state.lastSeq = seq

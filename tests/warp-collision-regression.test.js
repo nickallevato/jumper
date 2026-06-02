@@ -129,6 +129,25 @@ describe('SMA-275 warp and collision regression coverage', () => {
     expect(shouldIgnorePostJoinMove({}, joinedAt)).toBe(false)
   })
 
+  it('ignores stale destination spawn moves after a portal lands away from spawn', () => {
+    const joinedAt = 1_000
+    const state = {
+      ignoreMovesUntil: joinedAt + POST_JOIN_MOVE_GRACE_MS,
+      ignoreSpawnMove: { x: 8, y: 8, z: 0 },
+    }
+
+    expect(shouldIgnorePostJoinMove(
+      state,
+      joinedAt + POST_JOIN_MOVE_GRACE_MS + 1,
+      { x: 8, y: 8, z: 0 }
+    )).toBe(true)
+    expect(shouldIgnorePostJoinMove(
+      state,
+      joinedAt + POST_JOIN_MOVE_GRACE_MS + 1,
+      { x: 2, y: 3, z: 0 }
+    )).toBe(false)
+  })
+
   it('keeps observer-visible platform ride positions consistent after warp metadata is present', () => {
     const { roomId, riser, plate } = COUNTERWEIGHT
     const raisedPlatforms = [
