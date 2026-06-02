@@ -1,5 +1,5 @@
 import { doorsForRoom } from '../../shared/doors.js'
-import { ROOM_CONTENT_BOUNDS, ROOM_SPAWNS } from '../../shared/constants.js'
+import { ROOM_CONTENT_BOUNDS, ROOM_PORTALS, ROOM_SPAWNS } from '../../shared/constants.js'
 
 // Room registry. Each room defines its tile grid, elevated platforms, spawn point,
 // portals to other rooms, locked doors, and a camera background tint. WorldScene renders
@@ -178,11 +178,7 @@ export const ROOMS = {
     platforms: OVERWORLD_PLATFORMS,
     spawn: ROOM_SPAWNS.overworld,
     bg: '#1a1a2e',
-    portals: [
-      { tx: 13, ty: 13, to: 'dungeon_grove' },
-      { tx: 13, ty: 2, to: 'dungeon_belltower' },
-      { tx: 2, ty: 7, to: 'dungeon_library' },
-    ],
+    portals: ROOM_PORTALS.overworld,
     doors: doorsForRoom('overworld'),
     follow: true,   // the overworld grows beyond one screen — camera follows the player
   },
@@ -192,7 +188,7 @@ export const ROOMS = {
     platforms: GROVE_PLATFORMS,
     spawn: ROOM_SPAWNS.dungeon_grove,
     bg: '#0c1422',
-    portals: [{ tx: 2, ty: 2, to: 'overworld' }],
+    portals: ROOM_PORTALS.dungeon_grove,
     doors: doorsForRoom('dungeon_grove'),
     // Hidden stepping stones across the pool — only visible/solid while holding the Lantern.
     hidden: [
@@ -208,7 +204,7 @@ export const ROOMS = {
     platforms: BELLTOWER_PLATFORMS,
     spawn: ROOM_SPAWNS.dungeon_belltower,
     bg: '#13111c',
-    portals: [{ tx: 4, ty: 4, to: 'overworld' }],
+    portals: ROOM_PORTALS.dungeon_belltower,
     follow: true,                              // tall room — camera follows the player
     bell: { tx: 3, ty: 1, tz: 5.4, reachZ: 5.0 },
   },
@@ -218,7 +214,7 @@ export const ROOMS = {
     platforms: LIBRARY_PLATFORMS,
     spawn: ROOM_SPAWNS.dungeon_library,
     bg: '#0a0a14',
-    portals: [{ tx: 1, ty: 1, to: 'overworld' }],
+    portals: ROOM_PORTALS.dungeon_library,
     follow: true,
     // Hidden shelves bridge from the top book-stack to the archive ledge — Lantern only.
     hidden: [
@@ -233,7 +229,7 @@ export const ROOMS = {
     platforms: DEEP_PLATFORMS,
     spawn: ROOM_SPAWNS.dungeon_deep,
     bg: '#080911',
-    portals: [{ tx: 4, ty: 1, to: 'overworld' }],
+    portals: ROOM_PORTALS.dungeon_deep,
     follow: true,
   },
 }

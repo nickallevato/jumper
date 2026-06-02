@@ -57,8 +57,14 @@ export class RemotePlayer {
     showEmoteAbove(this.scene, this.gfx, type)
   }
 
-  updateTarget(x, y, z, cosmeticId) {
-    this._buffer = pushSnapshot(this._buffer, { t: this.scene.time.now, x, y, z })
+  updateTarget(x, y, z, cosmeticId, options = {}) {
+    if (options.snap) {
+      this.tx = x; this.ty = y; this.tz = z
+      this._buffer = [{ t: this.scene.time.now, x, y, z }]
+      this._syncPosition()
+    } else {
+      this._buffer = pushSnapshot(this._buffer, { t: this.scene.time.now, x, y, z })
+    }
     if (cosmeticId != null && cosmeticId !== this.cosmeticId) {
       this.cosmeticId = cosmeticId
       this._drawShape()

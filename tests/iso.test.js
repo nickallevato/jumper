@@ -14,10 +14,12 @@ import {
 import { MAX_JUMP_HEIGHT, TILE_H } from '../shared/constants.js'
 import {
   ROOM_CONTENT_BOUNDS,
+  ROOM_PORTALS,
   ROOM_SPAWNS,
   clampAllowedRoomPosition,
   contentBoundsForRoom,
   fallOutRecoveryPosition,
+  landingForPortalTransition,
   isFallOutPosition,
   isRoomPositionPassable,
 } from '../shared/constants.js'
@@ -257,6 +259,34 @@ describe('iso', () => {
     }
   })
 
+  it('portal transitions have deterministic off-portal landing tiles', () => {
+    for (const [fromRoomId, portals] of Object.entries(ROOM_PORTALS)) {
+      for (const portal of portals) {
+        const destination = ROOMS[portal.to]
+        const landing = landingForPortalTransition(portal.to, {
+          roomId: fromRoomId,
+          tx: portal.tx,
+          ty: portal.ty,
+        })
+
+        expect(landing, `${fromRoomId} ${portal.tx},${portal.ty}`).toEqual(portal.landing)
+        expect(landingForPortalTransition(portal.to, {
+          roomId: fromRoomId,
+          tx: portal.tx,
+          ty: portal.ty,
+        })).toEqual(landing)
+        expect(isInBounds(destination, landing.tx, landing.ty), `${portal.to} ${JSON.stringify(landing)}`).toBe(true)
+        expect(destination.grid[landing.ty]?.[landing.tx], `${portal.to} ${JSON.stringify(landing)}`).toBe(1)
+        expect(destination.portals.some(p => p.tx === landing.tx && p.ty === landing.ty), portal.to).toBe(false)
+      }
+    }
+  })
+
+  it('invalid portal transitions fall back to the destination room spawn', () => {
+    expect(landingForPortalTransition('dungeon_grove', { roomId: 'overworld', tx: 99, ty: 99 }))
+      .toEqual(ROOM_SPAWNS.dungeon_grove)
+  })
+
   it('dungeon_deep is an authored follow-camera descent room', () => {
     const room = ROOMS.dungeon_deep
     expect(room).toBeDefined()
@@ -264,7 +294,7 @@ describe('iso', () => {
     expect(room.contentBounds).toEqual(ROOM_CONTENT_BOUNDS.dungeon_deep)
     expect(room.spawn).toEqual(ROOM_SPAWNS.dungeon_deep)
     expect(room.follow).toBe(true)
-    expect(room.portals).toEqual([{ tx: 4, ty: 1, to: 'overworld' }])
+    expect(room.portals).toEqual(ROOM_PORTALS.dungeon_deep)
 
     const authoredHeights = new Set(room.platforms.map(p => p.tz))
     expect(authoredHeights.size).toBeGreaterThanOrEqual(4)

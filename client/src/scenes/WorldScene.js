@@ -27,6 +27,8 @@ export class WorldScene extends Phaser.Scene {
     this.playerId = data?.playerId
     this.profile  = data?.profile
     this.roomId   = data?.roomId ?? 'overworld'
+    this._fromPortal = data?.fromPortal ?? null
+    this._lastWarpId = null
 
     // Detach socket handlers when this scene instance stops (e.g. on room transition),
     // so a restart doesn't stack duplicate listeners on the shared socket.
@@ -134,9 +136,10 @@ export class WorldScene extends Phaser.Scene {
       this._socket.emit(E.DISCOVER, payload)
     }
 
-    socket.emit(E.JOIN_ROOM, { roomId: this.roomId })
+    socket.emit(E.JOIN_ROOM, { roomId: this.roomId, fromPortal: this._fromPortal })
 
-    socket.on(E.JOIN_OK, ({ players, worldItems, puzzle, openDoors }) => {
+    socket.on(E.JOIN_OK, ({ players, worldItems, puzzle, openDoors, warp }) => {
+      this._applyWarp(warp)
       for (const p of players) {
         if (p.id === this.playerId) continue
         this.remotePlayers.set(p.id, new RemotePlayer(this, p.id, p.x, p.y, p.z, p.cosmeticId))
@@ -156,16 +159,25 @@ export class WorldScene extends Phaser.Scene {
       const seen = new Set()
       for (const p of players) {
         if (p.id === this.playerId) {
-          this.player.reconcileFromServer(p, this._pendingInputs)
+          if (p.warp?.id != null && p.warp.id !== this._lastWarpId) {
+            this._applyWarp({ id: p.warp.id, x: p.x, y: p.y, z: p.z, facing: p.facing })
+          } else {
+            this.player.reconcileFromServer(p, this._pendingInputs)
+          }
           this._pendingInputs = pruneAckedInputs(this._pendingInputs, p.seq)
           this._lastState = this.player.getState()
           continue
         }
         seen.add(p.id)
+        const snap = p.warp?.id != null && p.warp.id !== this.remotePlayers.get(p.id)?._lastWarpId
         if (this.remotePlayers.has(p.id)) {
-          this.remotePlayers.get(p.id).updateTarget(p.x, p.y, p.z, p.cosmeticId)
+          const remote = this.remotePlayers.get(p.id)
+          remote.updateTarget(p.x, p.y, p.z, p.cosmeticId, { snap })
+          if (p.warp?.id != null) remote._lastWarpId = p.warp.id
         } else {
-          this.remotePlayers.set(p.id, new RemotePlayer(this, p.id, p.x, p.y, p.z, p.cosmeticId))
+          const remote = new RemotePlayer(this, p.id, p.x, p.y, p.z, p.cosmeticId)
+          if (p.warp?.id != null) remote._lastWarpId = p.warp.id
+          this.remotePlayers.set(p.id, remote)
         }
       }
       for (const [id, rp] of this.remotePlayers) {
@@ -414,10 +426,19 @@ export class WorldScene extends Phaser.Scene {
   _enterPortal(to) {
     if (this._transitioning) return
     this._transitioning = true
+    const fromPortal = this._activePortal
     this.cameras.main.fadeOut(180, 0, 0, 0)
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.restart({ playerId: this.playerId, profile: this.profile, roomId: to })
+      this.scene.restart({ playerId: this.playerId, profile: this.profile, roomId: to, fromPortal })
     })
+  }
+
+  _applyWarp(warp) {
+    if (!warp || warp.id === this._lastWarpId) return
+    this._lastWarpId = warp.id
+    this.player.applyServerState(warp)
+    this._pendingInputs = []
+    this._lastState = this.player.getState()
   }
 
   _renderWorldItems(worldItems) {
@@ -462,6 +483,7 @@ export class WorldScene extends Phaser.Scene {
     if (!this._portalLock) {
       for (const portal of this.portals) {
         if (Math.abs(this.player.tx - portal.tx) < 0.6 && Math.abs(this.player.ty - portal.ty) < 0.6) {
+          this._activePortal = { roomId: this.roomId, tx: portal.tx, ty: portal.ty }
           this._enterPortal(portal.to)
           break
         }

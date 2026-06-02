@@ -39,6 +39,26 @@ export const ROOM_SPAWNS = {
   dungeon_deep: { tx: 3, ty: 1 },
 }
 
+export const ROOM_PORTALS = {
+  overworld: [
+    { tx: 13, ty: 13, to: 'dungeon_grove', landing: { tx: 2, ty: 3 } },
+    { tx: 13, ty: 2, to: 'dungeon_belltower', landing: { tx: 4, ty: 3 } },
+    { tx: 2, ty: 7, to: 'dungeon_library', landing: { tx: 2, ty: 1 } },
+  ],
+  dungeon_grove: [
+    { tx: 2, ty: 2, to: 'overworld', landing: { tx: 13, ty: 14 } },
+  ],
+  dungeon_belltower: [
+    { tx: 4, ty: 4, to: 'overworld', landing: { tx: 14, ty: 2 } },
+  ],
+  dungeon_library: [
+    { tx: 1, ty: 1, to: 'overworld', landing: { tx: 3, ty: 7 } },
+  ],
+  dungeon_deep: [
+    { tx: 4, ty: 1, to: 'overworld', landing: { tx: 4, ty: 3 } },
+  ],
+}
+
 const ROOM_WALL_TILES = {
   overworld: new Set([
     '3,2', '4,2', '11,2', '12,2',
@@ -64,6 +84,23 @@ export function contentBoundsForRoom(roomId) {
 
 export function spawnForRoom(roomId) {
   return ROOM_SPAWNS[roomId] ?? ROOM_SPAWNS.overworld
+}
+
+export function findPortal(roomId, { tx, ty, to } = {}) {
+  if (!Number.isFinite(tx) || !Number.isFinite(ty)) return null
+  return (ROOM_PORTALS[roomId] ?? []).find(portal =>
+    portal.tx === tx && portal.ty === ty && (to == null || portal.to === to)
+  ) ?? null
+}
+
+export function landingForPortalTransition(destinationRoomId, fromPortal = null) {
+  const portal = findPortal(fromPortal?.roomId, {
+    tx: fromPortal?.tx,
+    ty: fromPortal?.ty,
+    to: destinationRoomId,
+  })
+  if (!portal?.landing) return spawnForRoom(destinationRoomId)
+  return portal.landing
 }
 
 export function isFallOutPosition(roomId, { z }) {
