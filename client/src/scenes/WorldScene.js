@@ -29,6 +29,7 @@ export class WorldScene extends Phaser.Scene {
     this.roomId   = data?.roomId ?? 'overworld'
     this._fromPortal = data?.fromPortal ?? null
     this._lastWarpId = null
+    this._joined = false
 
     // Detach socket handlers when this scene instance stops (e.g. on room transition),
     // so a restart doesn't stack duplicate listeners on the shared socket.
@@ -140,6 +141,7 @@ export class WorldScene extends Phaser.Scene {
 
     socket.on(E.JOIN_OK, ({ players, worldItems, puzzle, openDoors, warp }) => {
       this._applyWarp(warp)
+      this._joined = true
       for (const p of players) {
         if (p.id === this.playerId) continue
         this.remotePlayers.set(p.id, new RemotePlayer(this, p.id, p.x, p.y, p.z, p.cosmeticId))
@@ -467,6 +469,7 @@ export class WorldScene extends Phaser.Scene {
   update(_time, delta) {
     const dt = delta / 1000
     if (this._transitioning) return
+    if (!this._joined) return
     this.player.update(dt, this.cursors, this.keys, this.grid, this.platforms)
 
     // Riser: redraw at its (possibly tweening) height, and carry a rider up/down with it.

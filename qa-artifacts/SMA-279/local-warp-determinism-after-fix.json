@@ -1,0 +1,1275 @@
+{
+  "baseUrl": "http://localhost:3012",
+  "generatedAt": "2026-06-02T04:51:58.732Z",
+  "token": "9b0a2be9-5dd6-456a-bd79-27e2b34902f5",
+  "playerId": 1,
+  "repeats": 3,
+  "summary": {
+    "total": 28,
+    "passed": 28,
+    "failed": 0,
+    "injectedRaceFailures": 0
+  },
+  "samples": [
+    {
+      "route": {
+        "from": "overworld",
+        "to": "dungeon_grove",
+        "at": {
+          "tx": 13,
+          "ty": 13
+        },
+        "landing": {
+          "tx": 2,
+          "ty": 3
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 2,
+        "y": 3,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 3,
+        "x": 2,
+        "y": 3,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 2,
+        "y": 3,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 3
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "overworld",
+        "to": "dungeon_grove",
+        "at": {
+          "tx": 13,
+          "ty": 13
+        },
+        "landing": {
+          "tx": 2,
+          "ty": 3
+        }
+      },
+      "repeat": 1,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 2,
+        "y": 3,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 5,
+        "x": 2,
+        "y": 3,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 2,
+        "y": 3,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 5
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "overworld",
+        "to": "dungeon_grove",
+        "at": {
+          "tx": 13,
+          "ty": 13
+        },
+        "landing": {
+          "tx": 2,
+          "ty": 3
+        }
+      },
+      "repeat": 2,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 2,
+        "y": 3,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 7,
+        "x": 2,
+        "y": 3,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 2,
+        "y": 3,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 7
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "overworld",
+        "to": "dungeon_grove",
+        "at": {
+          "tx": 13,
+          "ty": 13
+        },
+        "landing": {
+          "tx": 2,
+          "ty": 3
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": true,
+      "expected": {
+        "x": 2,
+        "y": 3,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 9,
+        "x": 2,
+        "y": 3,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 2,
+        "y": 3,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 9
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "overworld",
+        "to": "dungeon_belltower",
+        "at": {
+          "tx": 13,
+          "ty": 2
+        },
+        "landing": {
+          "tx": 4,
+          "ty": 3
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 2,
+        "ty": 4
+      },
+      "joinOkWarp": {
+        "id": 11,
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 4,
+        "y": 3,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 11
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "overworld",
+        "to": "dungeon_belltower",
+        "at": {
+          "tx": 13,
+          "ty": 2
+        },
+        "landing": {
+          "tx": 4,
+          "ty": 3
+        }
+      },
+      "repeat": 1,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 2,
+        "ty": 4
+      },
+      "joinOkWarp": {
+        "id": 13,
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 4,
+        "y": 3,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 13
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "overworld",
+        "to": "dungeon_belltower",
+        "at": {
+          "tx": 13,
+          "ty": 2
+        },
+        "landing": {
+          "tx": 4,
+          "ty": 3
+        }
+      },
+      "repeat": 2,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 2,
+        "ty": 4
+      },
+      "joinOkWarp": {
+        "id": 15,
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 4,
+        "y": 3,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 15
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "overworld",
+        "to": "dungeon_belltower",
+        "at": {
+          "tx": 13,
+          "ty": 2
+        },
+        "landing": {
+          "tx": 4,
+          "ty": 3
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": true,
+      "expected": {
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 2,
+        "ty": 4
+      },
+      "joinOkWarp": {
+        "id": 17,
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 4,
+        "y": 3,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 17
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "overworld",
+        "to": "dungeon_library",
+        "at": {
+          "tx": 2,
+          "ty": 7
+        },
+        "landing": {
+          "tx": 2,
+          "ty": 1
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 2,
+        "y": 1,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 5,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 19,
+        "x": 2,
+        "y": 1,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 2,
+        "y": 1,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 19
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "overworld",
+        "to": "dungeon_library",
+        "at": {
+          "tx": 2,
+          "ty": 7
+        },
+        "landing": {
+          "tx": 2,
+          "ty": 1
+        }
+      },
+      "repeat": 1,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 2,
+        "y": 1,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 5,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 21,
+        "x": 2,
+        "y": 1,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 2,
+        "y": 1,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 21
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "overworld",
+        "to": "dungeon_library",
+        "at": {
+          "tx": 2,
+          "ty": 7
+        },
+        "landing": {
+          "tx": 2,
+          "ty": 1
+        }
+      },
+      "repeat": 2,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 2,
+        "y": 1,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 5,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 23,
+        "x": 2,
+        "y": 1,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 2,
+        "y": 1,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 23
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "overworld",
+        "to": "dungeon_library",
+        "at": {
+          "tx": 2,
+          "ty": 7
+        },
+        "landing": {
+          "tx": 2,
+          "ty": 1
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": true,
+      "expected": {
+        "x": 2,
+        "y": 1,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 5,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 25,
+        "x": 2,
+        "y": 1,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 2,
+        "y": 1,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 25
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_grove",
+        "to": "overworld",
+        "at": {
+          "tx": 2,
+          "ty": 2
+        },
+        "landing": {
+          "tx": 13,
+          "ty": 14
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 13,
+        "y": 14,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 27,
+        "x": 13,
+        "y": 14,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 13,
+        "y": 14,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 27
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_grove",
+        "to": "overworld",
+        "at": {
+          "tx": 2,
+          "ty": 2
+        },
+        "landing": {
+          "tx": 13,
+          "ty": 14
+        }
+      },
+      "repeat": 1,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 13,
+        "y": 14,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 29,
+        "x": 13,
+        "y": 14,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 13,
+        "y": 14,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 29
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_grove",
+        "to": "overworld",
+        "at": {
+          "tx": 2,
+          "ty": 2
+        },
+        "landing": {
+          "tx": 13,
+          "ty": 14
+        }
+      },
+      "repeat": 2,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 13,
+        "y": 14,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 31,
+        "x": 13,
+        "y": 14,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 13,
+        "y": 14,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 31
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_grove",
+        "to": "overworld",
+        "at": {
+          "tx": 2,
+          "ty": 2
+        },
+        "landing": {
+          "tx": 13,
+          "ty": 14
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": true,
+      "expected": {
+        "x": 13,
+        "y": 14,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 33,
+        "x": 13,
+        "y": 14,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 13,
+        "y": 14,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 33
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_belltower",
+        "to": "overworld",
+        "at": {
+          "tx": 4,
+          "ty": 4
+        },
+        "landing": {
+          "tx": 14,
+          "ty": 2
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 14,
+        "y": 2,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 35,
+        "x": 14,
+        "y": 2,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 14,
+        "y": 2,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 35
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_belltower",
+        "to": "overworld",
+        "at": {
+          "tx": 4,
+          "ty": 4
+        },
+        "landing": {
+          "tx": 14,
+          "ty": 2
+        }
+      },
+      "repeat": 1,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 14,
+        "y": 2,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 37,
+        "x": 14,
+        "y": 2,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 14,
+        "y": 2,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 37
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_belltower",
+        "to": "overworld",
+        "at": {
+          "tx": 4,
+          "ty": 4
+        },
+        "landing": {
+          "tx": 14,
+          "ty": 2
+        }
+      },
+      "repeat": 2,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 14,
+        "y": 2,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 39,
+        "x": 14,
+        "y": 2,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 14,
+        "y": 2,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 39
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_belltower",
+        "to": "overworld",
+        "at": {
+          "tx": 4,
+          "ty": 4
+        },
+        "landing": {
+          "tx": 14,
+          "ty": 2
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": true,
+      "expected": {
+        "x": 14,
+        "y": 2,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 41,
+        "x": 14,
+        "y": 2,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 14,
+        "y": 2,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 41
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_library",
+        "to": "overworld",
+        "at": {
+          "tx": 1,
+          "ty": 1
+        },
+        "landing": {
+          "tx": 3,
+          "ty": 7
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 3,
+        "y": 7,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 43,
+        "x": 3,
+        "y": 7,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 3,
+        "y": 7,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 43
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_library",
+        "to": "overworld",
+        "at": {
+          "tx": 1,
+          "ty": 1
+        },
+        "landing": {
+          "tx": 3,
+          "ty": 7
+        }
+      },
+      "repeat": 1,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 3,
+        "y": 7,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 45,
+        "x": 3,
+        "y": 7,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 3,
+        "y": 7,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 45
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_library",
+        "to": "overworld",
+        "at": {
+          "tx": 1,
+          "ty": 1
+        },
+        "landing": {
+          "tx": 3,
+          "ty": 7
+        }
+      },
+      "repeat": 2,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 3,
+        "y": 7,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 47,
+        "x": 3,
+        "y": 7,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 3,
+        "y": 7,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 47
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_library",
+        "to": "overworld",
+        "at": {
+          "tx": 1,
+          "ty": 1
+        },
+        "landing": {
+          "tx": 3,
+          "ty": 7
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": true,
+      "expected": {
+        "x": 3,
+        "y": 7,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 49,
+        "x": 3,
+        "y": 7,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 3,
+        "y": 7,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 49
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_deep",
+        "to": "overworld",
+        "at": {
+          "tx": 4,
+          "ty": 1
+        },
+        "landing": {
+          "tx": 4,
+          "ty": 3
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 51,
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 4,
+        "y": 3,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 51
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_deep",
+        "to": "overworld",
+        "at": {
+          "tx": 4,
+          "ty": 1
+        },
+        "landing": {
+          "tx": 4,
+          "ty": 3
+        }
+      },
+      "repeat": 1,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 53,
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 4,
+        "y": 3,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 53
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_deep",
+        "to": "overworld",
+        "at": {
+          "tx": 4,
+          "ty": 1
+        },
+        "landing": {
+          "tx": 4,
+          "ty": 3
+        }
+      },
+      "repeat": 2,
+      "injectEarlySpawnMove": false,
+      "expected": {
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 55,
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 4,
+        "y": 3,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 55
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    },
+    {
+      "route": {
+        "from": "dungeon_deep",
+        "to": "overworld",
+        "at": {
+          "tx": 4,
+          "ty": 1
+        },
+        "landing": {
+          "tx": 4,
+          "ty": 3
+        }
+      },
+      "repeat": 0,
+      "injectEarlySpawnMove": true,
+      "expected": {
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "destinationSpawn": {
+        "tx": 8,
+        "ty": 8
+      },
+      "joinOkWarp": {
+        "id": 57,
+        "x": 4,
+        "y": 3,
+        "z": 0
+      },
+      "firstWarpTick": {
+        "id": 1,
+        "x": 4,
+        "y": 3,
+        "z": 0,
+        "facing": "se",
+        "cosmeticId": 1,
+        "warp": {
+          "id": 57
+        }
+      },
+      "joinMatches": true,
+      "tickMatches": true,
+      "passed": true
+    }
+  ]
+}

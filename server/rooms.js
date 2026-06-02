@@ -12,6 +12,11 @@ import { COUNTERWEIGHT, isOnPlate, isAtGoal, PLATE_RADIUS } from '../shared/puzz
 import { findDoorNear } from '../shared/doors.js'
 
 const S = E
+export const POST_JOIN_MOVE_GRACE_MS = 250
+
+export function shouldIgnorePostJoinMove(state, now = Date.now()) {
+  return Number.isFinite(state?.ignoreMovesUntil) && now < state.ignoreMovesUntil
+}
 
 // The item a player currently holds (or null), for private held-state sync.
 function heldItemInfo(db, playerId) {
@@ -62,6 +67,7 @@ export function attachRooms(io, db) {
       state.x = landing.tx; state.y = landing.ty; state.z = 0
       state.warpId = (state.warpId ?? 0) + 1
       state.lastSeq = undefined
+      state.ignoreMovesUntil = Date.now() + POST_JOIN_MOVE_GRACE_MS
       socket.join(roomId)
 
       const roomPlayers = [...players.entries()]
@@ -87,6 +93,7 @@ export function attachRooms(io, db) {
       if (!isValidTilePosition({ x, y, z })) return
       const state = players.get(playerId)
       if (!state?.roomId) return
+      if (shouldIgnorePostJoinMove(state)) return
       // Record the last input we processed so the client can reconcile its
       // prediction against the exact input this authoritative state reflects.
       if (typeof seq === 'number') state.lastSeq = seq

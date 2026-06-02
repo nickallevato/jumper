@@ -10,7 +10,12 @@ import {
 } from '../shared/constants.js'
 import { COUNTERWEIGHT, isOnPlate } from '../shared/puzzles.js'
 import { canStepTo, groundHeightAt } from '../client/src/terrain.js'
-import { buildRoomPlayerPayload, createFixedStepLoop } from '../server/rooms.js'
+import {
+  POST_JOIN_MOVE_GRACE_MS,
+  buildRoomPlayerPayload,
+  createFixedStepLoop,
+  shouldIgnorePostJoinMove,
+} from '../server/rooms.js'
 
 const EXPECTED_PORTAL_ROUTES = [
   { from: 'overworld', at: { tx: 13, ty: 13 }, to: 'dungeon_grove', landing: { tx: 2, ty: 3 } },
@@ -112,6 +117,16 @@ describe('SMA-275 warp and collision regression coverage', () => {
     expect(destPayload.find(p => p.id === 'warper')).toMatchObject({
       x: 2, y: 3, z: 0, warp: { id: 3 },
     })
+  })
+
+  it('ignores spawn-position moves during the post-join warp grace window', () => {
+    const joinedAt = 1_000
+    const state = { ignoreMovesUntil: joinedAt + POST_JOIN_MOVE_GRACE_MS }
+
+    expect(shouldIgnorePostJoinMove(state, joinedAt)).toBe(true)
+    expect(shouldIgnorePostJoinMove(state, joinedAt + POST_JOIN_MOVE_GRACE_MS - 1)).toBe(true)
+    expect(shouldIgnorePostJoinMove(state, joinedAt + POST_JOIN_MOVE_GRACE_MS)).toBe(false)
+    expect(shouldIgnorePostJoinMove({}, joinedAt)).toBe(false)
   })
 
   it('keeps observer-visible platform ride positions consistent after warp metadata is present', () => {
