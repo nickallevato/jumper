@@ -206,27 +206,26 @@ export function createFixedStepLoop({
 }) {
   let lastTime = now()
   let accumulatorMs = 0
-  let broadcastAccumulatorMs = 0
   let tick = 0
   let simulationTimeMs = 0
+  let nextBroadcastTimeMs = broadcastMs
 
   const runFrame = () => {
     const currentTime = now()
     const elapsedMs = Math.max(0, currentTime - lastTime)
     lastTime = currentTime
     accumulatorMs += elapsedMs
-    broadcastAccumulatorMs += elapsedMs
 
     while (accumulatorMs >= stepMs) {
       tick += 1
       simulationTimeMs += stepMs
       step({ tick, simulationTimeMs, stepMs })
       accumulatorMs -= stepMs
-    }
 
-    if (broadcastAccumulatorMs >= broadcastMs) {
-      broadcast({ tick, simulationTimeMs, alpha: accumulatorMs / stepMs })
-      broadcastAccumulatorMs %= broadcastMs
+      while (simulationTimeMs >= nextBroadcastTimeMs) {
+        broadcast({ tick, simulationTimeMs, alpha: accumulatorMs / stepMs })
+        nextBroadcastTimeMs += broadcastMs
+      }
     }
   }
 
