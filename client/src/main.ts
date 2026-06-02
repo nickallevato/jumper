@@ -25,6 +25,14 @@ interface PlayerView {
   label: Phaser.GameObjects.Text;
 }
 
+interface RosterView {
+  container: Phaser.GameObjects.Container;
+  bg: Phaser.GameObjects.Graphics;
+  swatch: Phaser.GameObjects.Arc;
+  label: Phaser.GameObjects.Text;
+  pulse?: Phaser.Tweens.Tween;
+}
+
 type Input = { left: boolean; right: boolean; up: boolean; down: boolean; jump: boolean };
 
 class GameScene extends Phaser.Scene {
@@ -32,6 +40,8 @@ class GameScene extends Phaser.Scene {
   private playerCountText!: Phaser.GameObjects.Text;
   private room?: Room<JumperRoomState>;
   private playerViews = new Map<string, PlayerView>();
+  private rosterViews = new Map<string, RosterView>();
+  private rosterPanel!: Phaser.GameObjects.Graphics;
   private keys!: {
     left: Phaser.Input.Keyboard.Key; right: Phaser.Input.Keyboard.Key;
     up: Phaser.Input.Keyboard.Key; down: Phaser.Input.Keyboard.Key;
@@ -64,6 +74,8 @@ class GameScene extends Phaser.Scene {
     this.playerCountText = this.add.text(8, 28, "", {
       fontFamily: "monospace", fontSize: "13px", color: "#aaffaa",
     }).setScrollFactor(0).setDepth(100);
+
+    this.rosterPanel = this.add.graphics().setScrollFactor(0).setDepth(100);
 
     this.add.text(8, this.scale.height - 20, "WASD/Arrows: move  |  Space: jump", {
       fontFamily: "monospace", fontSize: "11px", color: "#888888",
@@ -216,10 +228,12 @@ class GameScene extends Phaser.Scene {
     const $ = getStateCallbacks(room);
     $(room.state).players.onAdd((player: PlayerState, sessionId: string) => {
       this.addPlayerView(sessionId, player, $);
+      this.addRosterView(sessionId, player, $);
       this.updateCount();
     });
     $(room.state).players.onRemove((_p: PlayerState, sessionId: string) => {
       this.removePlayerView(sessionId);
+      this.removeRosterView(sessionId);
       this.updateCount();
     });
 
@@ -228,7 +242,7 @@ class GameScene extends Phaser.Scene {
       const consented = code === 1000 || code === 1001;
       if (consented || !this.reconnectionToken) {
         this.statusText.setText("Disconnected — refresh to rejoin");
-        for (const id of [...this.playerViews.keys()]) this.removePlayerView(id);
+        this.clearPlayerStateViews();
         this.playerCountText.setText("Players: 0");
         return;
       }
@@ -249,7 +263,7 @@ class GameScene extends Phaser.Scene {
         console.log("[client] reconnected", room.roomId, room.sessionId);
         this.statusText.setText(`Room: ${room.roomId} (reconnected)`);
         // Clear stale views — onAdd will repopulate from the rejoined state.
-        for (const id of [...this.playerViews.keys()]) this.removePlayerView(id);
+        this.clearPlayerStateViews();
         this.attachRoom(room);
         return;
       } catch (err) {
@@ -258,7 +272,7 @@ class GameScene extends Phaser.Scene {
       }
     }
     this.statusText.setText("Reconnect failed — refresh to rejoin");
-    for (const id of [...this.playerViews.keys()]) this.removePlayerView(id);
+    this.clearPlayerStateViews();
     this.playerCountText.setText("Players: 0");
   }
 
@@ -281,6 +295,7 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(0.5, 1).setDepth(baseDepth + 2);
 
     this.playerViews.set(sessionId, { shadow, body, label });
+    this.applyReconnectStyle(sessionId, player.isReconnecting);
 
     $(player).onChange(() => {
       const view = this.playerViews.get(sessionId);
@@ -300,7 +315,100 @@ class GameScene extends Phaser.Scene {
       view.shadow.setDepth(depth);
       view.body.setDepth(depth + 1);
       view.label.setDepth(depth + 2);
+      this.applyReconnectStyle(sessionId, player.isReconnecting);
     });
+  }
+
+  private addRosterView(
+    sessionId: string,
+    player: PlayerState,
+    $: ReturnType<typeof getStateCallbacks<JumperRoomState>>,
+  ): void {
+    const bg = this.add.graphics();
+    const swatch = this.add.circle(14, 13, 6, player.color);
+    const label = this.add.text(26, 7, this.playerDisplayName(player, sessionId), {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#f0f0f0",
+    });
+    const container = this.add.container(0, 0, [bg, swatch, label])
+      .setScrollFactor(0)
+      .setDepth(101);
+
+    this.rosterViews.set(sessionId, { container, bg, swatch, label });
+    this.drawRosterChip(sessionId, player);
+    this.applyReconnectStyle(sessionId, player.isReconnecting);
+    this.layoutRoster();
+
+    $(player).onChange(() => {
+      this.drawRosterChip(sessionId, player);
+      this.applyReconnectStyle(sessionId, player.isReconnecting);
+    });
+  }
+
+  private drawRosterChip(sessionId: string, player: PlayerState): void {
+    const roster = this.rosterViews.get(sessionId);
+    if (!roster) return;
+    roster.bg.clear();
+    roster.bg.fillStyle(0x24243f, 0.94);
+    roster.bg.lineStyle(1, player.isReconnecting ? 0x56ccf2 : 0x3a3a58, player.isReconnecting ? 0.9 : 0.65);
+    roster.bg.fillRoundedRect(0, 0, 168, 26, 6);
+    roster.bg.strokeRoundedRect(0.5, 0.5, 167, 25, 6);
+    roster.swatch.setFillStyle(player.color);
+    roster.label.setText(this.playerDisplayName(player, sessionId));
+  }
+
+  private layoutRoster(): void {
+    const panelWidth = 188;
+    const chipHeight = 26;
+    const gap = 6;
+    const pad = 8;
+    const count = this.rosterViews.size;
+    const panelHeight = count === 0 ? 0 : count * chipHeight + Math.max(0, count - 1) * gap + pad * 2;
+    const x = this.scale.width - panelWidth - 12;
+    const y = 12;
+
+    this.rosterPanel.clear();
+    if (count > 0) {
+      this.rosterPanel.fillStyle(0x1a1a2e, 0.92);
+      this.rosterPanel.lineStyle(1, 0x56ccf2, 0.32);
+      this.rosterPanel.fillRoundedRect(x, y, panelWidth, panelHeight, 8);
+      this.rosterPanel.strokeRoundedRect(x + 0.5, y + 0.5, panelWidth - 1, panelHeight - 1, 8);
+    }
+
+    [...this.rosterViews.entries()].sort(([a], [b]) => a.localeCompare(b)).forEach(([, roster], index) => {
+      roster.container.setPosition(x + pad, y + pad + index * (chipHeight + gap));
+    });
+  }
+
+  private applyReconnectStyle(sessionId: string, isReconnecting: boolean): void {
+    const alpha = isReconnecting ? 0.5 : 1;
+    const player = this.playerViews.get(sessionId);
+    if (player) {
+      player.shadow.setAlpha(alpha);
+      player.body.setAlpha(alpha);
+      player.label.setAlpha(alpha);
+    }
+
+    const roster = this.rosterViews.get(sessionId);
+    if (!roster) return;
+    roster.container.setAlpha(isReconnecting ? 0.88 : 1);
+    if (isReconnecting) {
+      if (!roster.pulse) {
+        roster.pulse = this.tweens.add({
+          targets: roster.bg,
+          alpha: { from: 0.45, to: 1 },
+          duration: 650,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+        });
+      }
+    } else if (roster.pulse) {
+      roster.pulse.stop();
+      roster.pulse = undefined;
+      roster.bg.setAlpha(1);
+    }
   }
 
   private removePlayerView(sessionId: string): void {
@@ -310,6 +418,26 @@ class GameScene extends Phaser.Scene {
     view.body.destroy();
     view.label.destroy();
     this.playerViews.delete(sessionId);
+  }
+
+  private removeRosterView(sessionId: string): void {
+    const roster = this.rosterViews.get(sessionId);
+    if (!roster) return;
+    roster.pulse?.stop();
+    roster.container.destroy();
+    this.rosterViews.delete(sessionId);
+    this.layoutRoster();
+  }
+
+  private clearPlayerStateViews(): void {
+    for (const id of [...this.playerViews.keys()]) this.removePlayerView(id);
+    for (const id of [...this.rosterViews.keys()]) this.removeRosterView(id);
+    this.rosterPanel.clear();
+  }
+
+  private playerDisplayName(player: PlayerState, sessionId: string): string {
+    const name = player.name || `P-${sessionId.slice(0, 4)}`;
+    return name.length > 18 ? `${name.slice(0, 17)}...` : name;
   }
 
   private updateCount(): void {

@@ -9,6 +9,7 @@ export class PlayerState extends Schema {
   skin: string = "default";
   color: number = 0xffffff;
   name: string = "";
+  isReconnecting: boolean = false;
   velZ: number = 0;
   jumpCooldown: number = 0;
 }
@@ -21,6 +22,7 @@ defineTypes(PlayerState, {
   skin: "string",
   color: "number",
   name: "string",
+  isReconnecting: "boolean",
   velZ: "number",
   jumpCooldown: "number",
 });

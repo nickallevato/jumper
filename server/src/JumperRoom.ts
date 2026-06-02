@@ -44,6 +44,7 @@ export class JumperRoom extends Room<JumperRoomState> {
     if (existing) {
       console.log(`[JumperRoom] player rejoined: ${client.sessionId}`);
       this.reconnecting.delete(client.sessionId);
+      existing.isReconnecting = false;
       if (!this.inputs.has(client.sessionId)) {
         this.inputs.set(client.sessionId, { left: false, right: false, up: false, down: false, jump: false });
       }
@@ -75,11 +76,15 @@ export class JumperRoom extends Room<JumperRoomState> {
 
     console.log(`[JumperRoom] player disconnected, awaiting reconnect: ${client.sessionId}`);
     this.reconnecting.add(client.sessionId);
+    const player = this.state.players.get(client.sessionId);
+    if (player) player.isReconnecting = true;
 
     try {
       await this.allowReconnection(client, reconnectWindowSec());
       console.log(`[JumperRoom] player reconnected: ${client.sessionId}`);
       this.reconnecting.delete(client.sessionId);
+      const reconnectedPlayer = this.state.players.get(client.sessionId);
+      if (reconnectedPlayer) reconnectedPlayer.isReconnecting = false;
     } catch {
       console.log(`[JumperRoom] reconnect window expired, dropping: ${client.sessionId}`);
       this.reconnecting.delete(client.sessionId);
