@@ -2,7 +2,7 @@ import { Room, Client } from "colyseus";
 import { JumperRoomState, PlayerState } from "@jumper/shared";
 
 const TICK_RATE = 20;
-const MOVE_SPEED = 4;
+const MOVE_SPEED = 8;
 // Jump physics are tick-rate independent: gravity is integrated by dtSec.
 // Target feel: apex ≈ 2.78 tiles, airtime ≈ 700 ms (analytic: v0²/(2|g|), 2v0/|g|).
 // JUMP_VELOCITY: initial vertical velocity, tiles/s.
@@ -18,7 +18,17 @@ function reconnectWindowSec(): number {
 }
 const COLORS = [0xe85d4a, 0x4a90d9, 0xf2c94c, 0x6fcf97, 0xbb6bd9, 0xf2994a, 0xeb5757, 0x2d9cdb];
 
+export const MAX_NAME_LEN = 16;
+export function sanitizeName(raw: unknown, sessionId: string): string {
+  const fallback = `P-${sessionId.slice(0, 4)}`;
+  if (typeof raw !== "string") return fallback;
+  // Strip C0 controls + DEL, then whitespace-trim, then cap length.
+  const cleaned = raw.replace(/[\x00-\x1F\x7F]/g, "").trim().slice(0, MAX_NAME_LEN);
+  return cleaned.length > 0 ? cleaned : fallback;
+}
+
 type Input = { left: boolean; right: boolean; up: boolean; down: boolean; jump: boolean };
+type JoinOptions = { name?: unknown };
 
 export class JumperRoom extends Room<JumperRoomState> {
   override maxClients = 32;
@@ -39,7 +49,7 @@ export class JumperRoom extends Room<JumperRoomState> {
     console.log(`[JumperRoom] created (${this.roomId})`);
   }
 
-  override onJoin(client: Client): void {
+  override onJoin(client: Client, options?: JoinOptions): void {
     const existing = this.state.players.get(client.sessionId);
     if (existing) {
       console.log(`[JumperRoom] player rejoined: ${client.sessionId}`);
@@ -57,7 +67,7 @@ export class JumperRoom extends Room<JumperRoomState> {
     player.y = WORLD_SIZE / 2 + (Math.random() * 10 - 5);
     player.z = 0;
     player.color = COLORS[this.colorIndex++ % COLORS.length]!;
-    player.name = `P-${client.sessionId.slice(0, 4)}`;
+    player.name = sanitizeName(options?.name, client.sessionId);
     this.state.players.set(client.sessionId, player);
     this.inputs.set(client.sessionId, { left: false, right: false, up: false, down: false, jump: false });
   }

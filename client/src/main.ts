@@ -10,6 +10,47 @@ const SERVER_URL = `${window.location.protocol === "https:" ? "wss" : "ws"}://${
 const TILE_W = 64;
 const TILE_H = 32;
 const WORLD_SIZE = 50;
+const NAME_STORAGE_KEY = "jumper.name";
+const MAX_NAME_LEN = 16;
+
+function sanitizeClientName(raw: string): string {
+  return raw.replace(/[\x00-\x1F\x7F]/g, "").trim().slice(0, MAX_NAME_LEN);
+}
+
+function loadStoredName(): string {
+  try {
+    const v = window.localStorage.getItem(NAME_STORAGE_KEY);
+    return v ? sanitizeClientName(v) : "";
+  } catch {
+    return "";
+  }
+}
+
+function saveStoredName(name: string): void {
+  try { window.localStorage.setItem(NAME_STORAGE_KEY, name); } catch { /* ignore quota/disabled */ }
+}
+
+function promptForName(initial: string): Promise<string> {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById("name-overlay") as HTMLDivElement | null;
+    const form = document.getElementById("name-form") as HTMLFormElement | null;
+    const input = document.getElementById("name-input") as HTMLInputElement | null;
+    if (!overlay || !form || !input) { resolve(initial); return; }
+    input.value = initial;
+    overlay.hidden = false;
+    input.focus();
+    input.select();
+    const onSubmit = (e: Event) => {
+      e.preventDefault();
+      const name = sanitizeClientName(input.value);
+      if (name.length === 0) { input.focus(); return; }
+      overlay.hidden = true;
+      form.removeEventListener("submit", onSubmit);
+      resolve(name);
+    };
+    form.addEventListener("submit", onSubmit);
+  });
+}
 
 function isoToScreen(tx: number, ty: number, tz = 0): { x: number; y: number } {
   return {
@@ -116,15 +157,38 @@ class GameScene extends Phaser.Scene {
 
   private client = new Client(SERVER_URL);
   private reconnectionToken?: string;
+  private playerName = "";
 
   private async connect(): Promise<void> {
     try {
-      const room = await this.client.joinOrCreate<JumperRoomState>("jumper");
+      let name = loadStoredName();
+      if (!name) name = await promptForName("");
+      saveStoredName(name);
+      this.playerName = name;
+      this.showEditNameButton();
+      const room = await this.client.joinOrCreate<JumperRoomState>("jumper", { name });
       this.attachRoom(room);
     } catch (err) {
       console.error("[client] connect failed", err);
       this.statusText.setText(`Connect failed: ${(err as Error).message}`);
     }
+  }
+
+  private showEditNameButton(): void {
+    const btn = document.getElementById("name-edit") as HTMLButtonElement | null;
+    if (!btn) return;
+    btn.hidden = false;
+    btn.textContent = `name: ${this.playerName}`;
+    btn.onclick = async () => {
+      const next = await promptForName(this.playerName);
+      saveStoredName(next);
+      this.playerName = next;
+      btn.textContent = `name: ${next}`;
+      // Rejoining the server isn't required for the persistence story (F3 just needs
+      // the saved name to be sent on the next join), but tell the user to refresh
+      // for the rename to apply to other players this session.
+      this.statusText.setText(`Name saved — refresh to apply: ${next}`);
+    };
   }
 
   private attachRoom(room: Room<JumperRoomState>): void {
