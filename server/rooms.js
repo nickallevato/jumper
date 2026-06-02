@@ -242,12 +242,16 @@ function groupPlayersByRoom(players) {
 
 function broadcastRooms(io, byRoom) {
   for (const [roomId, list] of byRoom) {
-    const playerList = list.map(([id, p]) => ({
-      id, x: p.x, y: p.y, z: p.z, facing: p.facing, cosmeticId: p.cosmeticId, seq: p.lastSeq,
-      warp: p.warpId ? { id: p.warpId } : undefined,
-    }))
+    const playerList = buildRoomPlayerPayload(list)
     io.to(roomId).emit(S.TICK, { players: playerList })
   }
+}
+
+export function buildRoomPlayerPayload(list) {
+  return list.map(([id, p]) => ({
+    id, x: p.x, y: p.y, z: p.z, facing: p.facing, cosmeticId: p.cosmeticId, seq: p.lastSeq,
+    warp: p.warpId ? { id: p.warpId } : undefined,
+  }))
 }
 
 // The Counterweight puzzle: a weighted plate (player OR dropped item) raises a platform,
