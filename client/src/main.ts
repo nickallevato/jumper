@@ -10,6 +10,7 @@ const SERVER_URL = `${window.location.protocol === "https:" ? "wss" : "ws"}://${
 const TILE_W = 64;
 const TILE_H = 32;
 const WORLD_SIZE = 50;
+const CAMERA_EDGE_BUFFER = 48;
 
 function isoToScreen(tx: number, ty: number, tz = 0): { x: number; y: number } {
   return {
@@ -116,12 +117,15 @@ class GameScene extends Phaser.Scene {
   }
 
   private setupCamera(): void {
-    // World screen bounds: iso x ∈ [-(N-1)*TILE_W/2, (N-1)*TILE_W/2], y ∈ [0, (2*(N-1))*TILE_H/2]
+    // Full iso diamond bounds plus viewport padding, so edge/corner players are
+    // not clamped against the viewport edge when the camera follows them.
     const N = WORLD_SIZE;
-    const minX = this.originX - (N - 1) * (TILE_W / 2) - TILE_W;
-    const maxX = this.originX + (N - 1) * (TILE_W / 2) + TILE_W;
-    const minY = this.originY - TILE_H;
-    const maxY = this.originY + (2 * (N - 1)) * (TILE_H / 2) + TILE_H * 2;
+    const viewportPadX = this.scale.width / 2 - CAMERA_EDGE_BUFFER;
+    const viewportPadY = this.scale.height / 2 - CAMERA_EDGE_BUFFER;
+    const minX = this.originX - (N - 1) * (TILE_W / 2) - (TILE_W / 2) - viewportPadX;
+    const maxX = this.originX + (N - 1) * (TILE_W / 2) + (TILE_W / 2) + viewportPadX;
+    const minY = this.originY - (TILE_H / 2) - viewportPadY;
+    const maxY = this.originY + (2 * (N - 1)) * (TILE_H / 2) + (TILE_H / 2) + viewportPadY;
     this.cameras.main.setBounds(minX, minY, maxX - minX, maxY - minY);
 
     // Invisible follow target; we drive its position to the player centroid each frame.
