@@ -3,8 +3,9 @@ import { getProfile } from './profile.js'
 import { getWorldItems, pickupItem, dropItem, useItem } from './items.js'
 import { checkDiscovery } from './secrets.js'
 import {
-  TICK_MS, ROOM_CAP_SMALL, BOUNCE_VEL, SOCKET_EVENTS as E,
-  clampAllowedRoomPosition, fallOutRecoveryPosition, isFallOutPosition, spawnForRoom,
+  SERVER_SIMULATION_STEP_MS, SERVER_BROADCAST_MS, SERVER_LOOP_POLL_MS,
+  ROOM_CAP_SMALL, BOUNCE_VEL, SOCKET_EVENTS as E,
+  clampAllowedRoomPosition, fallOutRecoveryPosition, isFallOutPosition, landingForPortalTransition,
 } from '../shared/constants.js'
 import { isValidTilePosition } from '../shared/coordinates.js'
 import { COUNTERWEIGHT, isOnPlate, isAtGoal, PLATE_RADIUS } from '../shared/puzzles.js'
@@ -38,9 +39,10 @@ export function attachRooms(io, db) {
       socket.emit(S.AUTH_OK, { playerId, profile: full })
     })
 
-    socket.on(S.JOIN_ROOM, ({ roomId }) => {
+    socket.on(S.JOIN_ROOM, ({ roomId, fromPortal }) => {
       if (!playerId) return
       const state = players.get(playerId)
+      const previousRoomId = state?.roomId
 
       const roomSize = [...players.values()].filter(p => p.roomId === roomId).length
       if (roomId.startsWith('small_') && roomSize >= ROOM_CAP_SMALL) {
@@ -55,8 +57,11 @@ export function attachRooms(io, db) {
 
       if (state.roomId) socket.leave(state.roomId)
       state.roomId = roomId
-      const spawn = spawnForRoom(roomId)
-      state.x = spawn.tx; state.y = spawn.ty; state.z = 0
+      const portalRef = previousRoomId === fromPortal?.roomId ? fromPortal : null
+      const landing = landingForPortalTransition(roomId, portalRef)
+      state.x = landing.tx; state.y = landing.ty; state.z = 0
+      state.warpId = (state.warpId ?? 0) + 1
+      state.lastSeq = undefined
       socket.join(roomId)
 
       const roomPlayers = [...players.entries()]
@@ -72,6 +77,7 @@ export function attachRooms(io, db) {
         worldItems: getWorldItems(db, roomId),
         puzzle: { raised: !!puzzleRaised.get(roomId) },
         openDoors: doors,
+        warp: { id: state.warpId, x: state.x, y: state.y, z: state.z },
       })
       socket.emit(S.ITEM_HELD, { item: heldItemInfo(db, playerId) })
     })
@@ -165,29 +171,83 @@ export function attachRooms(io, db) {
     })
   })
 
-  // 20 ticks/sec broadcast + head-bounce detection
-  setInterval(() => {
-    // Group raw player records by room (keeps socket + per-player state accessible)
-    const byRoom = new Map()
-    for (const [id, p] of players) {
-      if (!p.roomId) continue
-      if (!byRoom.has(p.roomId)) byRoom.set(p.roomId, [])
-      byRoom.get(p.roomId).push([id, p])
+  createFixedStepLoop({
+    step: ({ simulationTimeMs }) => {
+      const byRoom = groupPlayersByRoom(players)
+      detectHeadBounces(io, db, byRoom, simulationTimeMs)
+      evaluateCounterweight(io, db, byRoom, puzzleRaised)
+
+      // Remember z for next simulation tick's falling check.
+      for (const [, p] of players) p._prevZ = p.z
+    },
+    broadcast: () => {
+      const byRoom = groupPlayersByRoom(players)
+      broadcastRooms(io, byRoom)
+    },
+  })
+}
+
+export function createFixedStepLoop({
+  step,
+  broadcast,
+  stepMs = SERVER_SIMULATION_STEP_MS,
+  broadcastMs = SERVER_BROADCAST_MS,
+  pollMs = SERVER_LOOP_POLL_MS,
+  now = () => Date.now(),
+  setTimer = (fn, ms) => setInterval(fn, ms),
+  clearTimer = timer => clearInterval(timer),
+}) {
+  let lastTime = now()
+  let accumulatorMs = 0
+  let broadcastAccumulatorMs = 0
+  let tick = 0
+  let simulationTimeMs = 0
+
+  const runFrame = () => {
+    const currentTime = now()
+    const elapsedMs = Math.max(0, currentTime - lastTime)
+    lastTime = currentTime
+    accumulatorMs += elapsedMs
+    broadcastAccumulatorMs += elapsedMs
+
+    while (accumulatorMs >= stepMs) {
+      tick += 1
+      simulationTimeMs += stepMs
+      step({ tick, simulationTimeMs, stepMs })
+      accumulatorMs -= stepMs
     }
 
-    detectHeadBounces(io, db, byRoom)
-    evaluateCounterweight(io, db, byRoom, puzzleRaised)
-
-    for (const [roomId, list] of byRoom) {
-      const playerList = list.map(([id, p]) => ({
-        id, x: p.x, y: p.y, z: p.z, facing: p.facing, cosmeticId: p.cosmeticId, seq: p.lastSeq,
-      }))
-      io.to(roomId).emit(S.TICK, { players: playerList })
+    if (broadcastAccumulatorMs >= broadcastMs) {
+      broadcast({ tick, simulationTimeMs, alpha: accumulatorMs / stepMs })
+      broadcastAccumulatorMs %= broadcastMs
     }
+  }
 
-    // Remember z for next tick's falling check
-    for (const [, p] of players) p._prevZ = p.z
-  }, TICK_MS)
+  const timer = setTimer(runFrame, pollMs)
+  return {
+    runFrame,
+    stop: () => clearTimer(timer),
+  }
+}
+
+function groupPlayersByRoom(players) {
+  const byRoom = new Map()
+  for (const [id, p] of players) {
+    if (!p.roomId) continue
+    if (!byRoom.has(p.roomId)) byRoom.set(p.roomId, [])
+    byRoom.get(p.roomId).push([id, p])
+  }
+  return byRoom
+}
+
+function broadcastRooms(io, byRoom) {
+  for (const [roomId, list] of byRoom) {
+    const playerList = list.map(([id, p]) => ({
+      id, x: p.x, y: p.y, z: p.z, facing: p.facing, cosmeticId: p.cosmeticId, seq: p.lastSeq,
+      warp: p.warpId ? { id: p.warpId } : undefined,
+    }))
+    io.to(roomId).emit(S.TICK, { players: playerList })
+  }
 }
 
 // The Counterweight puzzle: a weighted plate (player OR dropped item) raises a platform,
@@ -224,14 +284,13 @@ function evaluateCounterweight(io, db, byRoom, puzzleRaised) {
 }
 
 // Mechanic 5: when a falling player passes through another's head, bounce them.
-function detectHeadBounces(io, db, byRoom) {
-  const now = Date.now()
+function detectHeadBounces(io, db, byRoom, simulationTimeMs) {
   for (const [roomId, list] of byRoom) {
     for (let i = 0; i < list.length; i++) {
       const [aId, a] = list[i]
       const falling = a._prevZ !== undefined && a.z < a._prevZ - 0.001
       if (!falling) continue
-      if (a._bounceCd && now < a._bounceCd) continue
+      if (a._bounceCd && simulationTimeMs < a._bounceCd) continue
 
       for (let j = 0; j < list.length; j++) {
         if (i === j) continue
@@ -239,7 +298,7 @@ function detectHeadBounces(io, db, byRoom) {
         const dist = Math.hypot(a.x - b.x, a.y - b.y)
         if (dist < 0.6 && a.z >= b.z && a.z <= b.z + 0.8) {
           a.socket.emit(S.BOUNCE_HEAD, { vel: BOUNCE_VEL })
-          a._bounceCd = now + 600
+          a._bounceCd = simulationTimeMs + 600
           const disc = checkDiscovery(db, aId, {
             action: 'head_bounce', roomId,
             wx: Math.floor(a.x), wy: Math.floor(a.y), wz: Math.floor(a.z),

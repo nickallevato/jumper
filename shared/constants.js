@@ -1,4 +1,7 @@
-export const TICK_MS = 50             // 20 ticks/sec
+export const TICK_MS = 50             // 20 ticks/sec authoritative simulation step
+export const SERVER_SIMULATION_STEP_MS = TICK_MS
+export const SERVER_BROADCAST_MS = 50
+export const SERVER_LOOP_POLL_MS = 16
 export const TILE_W = 64
 export const TILE_H = 32
 export const MAX_POSITION_ABS = 2048
