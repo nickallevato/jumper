@@ -11,3 +11,15 @@ The server advances authoritative room simulation with a fixed timestep:
 - Broadcast cadence is configured separately with `SERVER_BROADCAST_MS`. Snapshot emission can change independently from simulation tick rate.
 
 Client rendering and interpolation should treat `tick` snapshots as presentation data. They must not change the authoritative simulation cadence.
+
+## Collision Footprints
+
+Tile collision uses a centered diamond footprint. Any world position `(x, y)` maps to its collision tile with `Math.round(x), Math.round(y)`, matching how walls, platforms, and risers are drawn around tile centers.
+
+- `clampAllowedRoomPosition` clamps room bounds first, then tries X and Y independently against `isRoomPositionPassable`. A wall tile blocks as soon as the player's rounded footprint enters that tile.
+- Platform standing height uses the same rounded footprint through `groundHeightAt`. This is the rule for landing, walking off ledges, and grounded step gating.
+- Grounded movement may step onto equal or lower surfaces. Walking up to a higher surface is blocked by `canStepTo`; the player must jump and land on it instead.
+- The counterweight riser is a mutable platform, not a separate collision system. Its current `tz` is the standing height at the riser tile for rendering, landing, and grounded step gating.
+- Content bounds are numeric room limits and are intentionally clamped before tile passability. They keep centered player footprints inside authored playable space.
+
+Use `Math.floor` only for discrete action/discovery payloads that intentionally record the lower integer cell. It must not be used for movement collision, wall passability, platform landing, or riser standing height.
