@@ -79,6 +79,7 @@ describe("JumperRoom", () => {
       expect(player.y).toBeGreaterThan(0);
       expect(player.z).toBe(0);
       expect(player.isJumping).toBe(false);
+      expect(player.isReconnecting).toBe(false);
     });
   });
 
@@ -166,6 +167,31 @@ describe("JumperRoom", () => {
       const restored = room2.state.players.get(sessionId);
       expect(restored).toBeDefined();
       expect(restored.x).toBeCloseTo(xBeforeDrop, 0);
+      expect(restored.isReconnecting).toBe(false);
+    });
+
+    it("marks dropped players reconnecting and clears the flag on reconnect", async () => {
+      const client1 = new Client(ENDPOINT);
+      const room1 = await client1.joinOrCreate("jumper");
+      rooms.push(room1);
+      const room2 = await joinRoom();
+      await waitForState(room2, (s) => s.players.size === 2);
+
+      const droppedSessionId = room1.sessionId;
+      const reconnectionToken = room1.reconnectionToken;
+      (room1 as any).connection.transport.ws.close();
+      rooms = rooms.filter((r) => r !== room1);
+
+      await waitForState(room2, (s) => s.players.get(droppedSessionId)?.isReconnecting === true);
+      expect(room2.state.players.get(droppedSessionId)!.isReconnecting).toBe(true);
+
+      const client2 = new Client(ENDPOINT);
+      const room1Reconnected = await client2.reconnect(reconnectionToken);
+      rooms.push(room1Reconnected);
+
+      await waitForState(room2, (s) => s.players.get(droppedSessionId)?.isReconnecting === false);
+      expect(room2.state.players.get(droppedSessionId)!.isReconnecting).toBe(false);
+      expect(room1Reconnected.sessionId).toBe(droppedSessionId);
     });
 
     it("dropout after window removes avatar; other players unaffected", async () => {
