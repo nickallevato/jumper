@@ -14,6 +14,7 @@ export class RemotePlayer {
     this.tx = x; this.ty = y; this.tz = z
     this.scene = scene
     this.cosmeticId = cosmeticId
+    this.isReconnecting = false
     // Buffer of timestamped authoritative snapshots; we render a fixed delay in
     // the past and interpolate between snapshots for smooth, constant-velocity
     // motion instead of exponential easing toward a moving target.
@@ -30,6 +31,14 @@ export class RemotePlayer {
 
     const ig = scene.add.graphics()
     this.indicatorGfx = ig
+
+    this.statusText = scene.add.text(0, 0, '', {
+      color: '#89dceb',
+      fontSize: '12px',
+      fontStyle: 'bold',
+      backgroundColor: 'rgba(30,30,46,0.72)',
+      padding: { x: 5, y: 2 },
+    }).setOrigin(0.5, 1).setVisible(false)
 
     this._syncPosition()
   }
@@ -58,6 +67,7 @@ export class RemotePlayer {
   }
 
   updateTarget(x, y, z, cosmeticId, options = {}) {
+    this.setReconnecting(!!options.isReconnecting)
     if (options.snap) {
       this.tx = x; this.ty = y; this.tz = z
       this._buffer = [{ t: this.scene.time.now, x, y, z }]
@@ -69,6 +79,14 @@ export class RemotePlayer {
       this.cosmeticId = cosmeticId
       this._drawShape()
     }
+  }
+
+  setReconnecting(isReconnecting) {
+    if (this.isReconnecting === isReconnecting) return
+    this.isReconnecting = isReconnecting
+    this.gfx.setAlpha(isReconnecting ? 0.48 : 1)
+    this.statusText.setVisible(isReconnecting)
+    this._drawIndicator()
   }
 
   update() {
@@ -93,17 +111,31 @@ export class RemotePlayer {
     this.gfx.setPosition(x, y)
     const k = 1 / (1 + Math.max(0, this.tz) * 0.5)
     this.shadowGfx.setScale(k, k)
-    this.shadowGfx.setAlpha(0.28 * k)
+    this.shadowGfx.setAlpha((this.isReconnecting ? 0.16 : 0.28) * k)
     this.indicatorGfx.setPosition(this.gfx.x, this.gfx.y - 34)
+    this.statusText.setPosition(this.gfx.x, this.gfx.y - 42)
     const depth = isoDepth(this.tx, this.ty, this.tz) + ISO_ENTITY_BIAS
     this.gfx.setDepth(depth)
     this.shadowGfx.setDepth(depth - 1)
     this.indicatorGfx.setDepth(depth + 0.1)
+    this.statusText.setDepth(depth + 0.2)
+    this._drawIndicator()
+  }
+
+  _drawIndicator() {
+    this.indicatorGfx.clear()
+    if (!this.isReconnecting) return
+    this.indicatorGfx.lineStyle(2, 0x89dceb, 0.9)
+    this.indicatorGfx.strokeCircle(0, 0, 13)
+    this.indicatorGfx.lineStyle(1, 0xffffff, 0.45)
+    this.indicatorGfx.strokeCircle(0, 0, 17)
+    this.statusText.setText('reconnecting')
   }
 
   destroy() {
     this.shadowGfx.destroy()
     this.gfx.destroy()
     this.indicatorGfx.destroy()
+    this.statusText.destroy()
   }
 }

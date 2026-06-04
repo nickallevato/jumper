@@ -13,7 +13,46 @@ import { findDoorNear } from '../shared/doors.js'
 
 const S = E
 export const POST_JOIN_MOVE_GRACE_MS = 250
+export const RECONNECT_WINDOW_MS_DEFAULT = 30_000
 const POSITION_EPSILON = 0.001
+
+export function reconnectWindowMs() {
+  const explicitMs = Number(process.env.JUMPER_RECONNECT_WINDOW_MS)
+  if (Number.isFinite(explicitMs) && explicitMs > 0) return explicitMs
+  const seconds = Number(process.env.JUMPER_RECONNECT_WINDOW_SEC)
+  if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000
+  return RECONNECT_WINDOW_MS_DEFAULT
+}
+
+export function isConsentedDisconnectReason(reason) {
+  return reason === 'client namespace disconnect' || reason === 'server namespace disconnect'
+}
+
+export function handlePlayerDisconnect(players, playerId, reason, {
+  setTimer = setTimeout,
+  clearTimer = clearTimeout,
+  windowMs = reconnectWindowMs(),
+} = {}) {
+  const state = players.get(playerId)
+  if (!state) return 'missing'
+
+  if (isConsentedDisconnectReason(reason)) {
+    if (state.reconnectTimer) clearTimer(state.reconnectTimer)
+    players.delete(playerId)
+    return 'removed'
+  }
+
+  state.socket = null
+  state.isReconnecting = true
+  state.lastSeq = undefined
+  if (state.reconnectTimer) clearTimer(state.reconnectTimer)
+  state.reconnectTimer = setTimer(() => {
+    const current = players.get(playerId)
+    if (!current?.isReconnecting) return
+    players.delete(playerId)
+  }, windowMs)
+  return 'reconnecting'
+}
 
 function samePosition(a, b) {
   return Math.abs((a?.x ?? 0) - (b?.x ?? 0)) <= POSITION_EPSILON &&
@@ -34,7 +73,7 @@ function heldItemInfo(db, playerId) {
 }
 
 export function attachRooms(io, db) {
-  // playerId → { socket, roomId, x, y, z, facing, cosmeticId }
+  // playerId → { socket, roomId, x, y, z, facing, cosmeticId, isReconnecting }
   const players = new Map()
   // roomId → whether that room's counterweight plate is currently weighted
   const puzzleRaised = new Map()
@@ -48,7 +87,16 @@ export function attachRooms(io, db) {
       const profile = getOrCreateProfile(db, token)
       playerId = profile.id
       const full = getProfile(db, playerId)
-      players.set(playerId, { socket, roomId: null, x: 8, y: 8, z: 0, facing: 'se', cosmeticId: profile.cosmetic_id })
+      const existing = players.get(playerId)
+      if (existing?.isReconnecting) {
+        if (existing.reconnectTimer) clearTimeout(existing.reconnectTimer)
+        existing.socket = socket
+        existing.cosmeticId = profile.cosmetic_id
+        existing.isReconnecting = false
+        existing.resumeRoomId = existing.roomId
+      } else {
+        players.set(playerId, { socket, roomId: null, x: 8, y: 8, z: 0, facing: 'se', cosmeticId: profile.cosmetic_id, isReconnecting: false })
+      }
       socket.emit(S.AUTH_OK, { playerId, profile: full })
     })
 
@@ -68,23 +116,28 @@ export function attachRooms(io, db) {
         return socket.emit(S.ROOM_DENIED, { reason: 'skill_level' })
       }
 
-      if (state.roomId) socket.leave(state.roomId)
+      const isResume = state.resumeRoomId === roomId
+      if (state.roomId && state.roomId !== roomId) socket.leave(state.roomId)
       state.roomId = roomId
-      const portalRef = previousRoomId === fromPortal?.roomId ? fromPortal : null
-      const landing = landingForPortalTransition(roomId, portalRef)
-      const spawn = spawnForRoom(roomId)
-      state.x = landing.tx; state.y = landing.ty; state.z = 0
-      state.warpId = (state.warpId ?? 0) + 1
-      state.lastSeq = undefined
-      state.ignoreMovesUntil = Date.now() + POST_JOIN_MOVE_GRACE_MS
-      state.ignoreSpawnMove = portalRef && (landing.tx !== spawn.tx || landing.ty !== spawn.ty)
-        ? { x: spawn.tx, y: spawn.ty, z: 0 }
-        : null
+      state.isReconnecting = false
+      state.resumeRoomId = null
+      if (!isResume) {
+        const portalRef = previousRoomId === fromPortal?.roomId ? fromPortal : null
+        const landing = landingForPortalTransition(roomId, portalRef)
+        const spawn = spawnForRoom(roomId)
+        state.x = landing.tx; state.y = landing.ty; state.z = 0
+        state.warpId = (state.warpId ?? 0) + 1
+        state.lastSeq = undefined
+        state.ignoreMovesUntil = Date.now() + POST_JOIN_MOVE_GRACE_MS
+        state.ignoreSpawnMove = portalRef && (landing.tx !== spawn.tx || landing.ty !== spawn.ty)
+          ? { x: spawn.tx, y: spawn.ty, z: 0 }
+          : null
+      }
       socket.join(roomId)
 
       const roomPlayers = [...players.entries()]
         .filter(([, p]) => p.roomId === roomId)
-        .map(([id, p]) => ({ id, x: p.x, y: p.y, z: p.z, cosmeticId: p.cosmeticId }))
+        .map(([id, p]) => buildPlayerPayload(id, p))
 
       const doors = [...(openDoors.get(roomId) ?? [])].map(k => {
         const [tx, ty] = k.split(',').map(Number)
@@ -105,6 +158,7 @@ export function attachRooms(io, db) {
       if (!isValidTilePosition({ x, y, z })) return
       const state = players.get(playerId)
       if (!state?.roomId) return
+      if (state.isReconnecting) return
       if (shouldIgnorePostJoinMove(state, Date.now(), { x, y, z })) return
       state.ignoreSpawnMove = null
       // Record the last input we processed so the client can reconcile its
@@ -186,8 +240,9 @@ export function attachRooms(io, db) {
       if (action === 'ring_bell') io.emit(S.WORLD_EVENT, { type: 'bell' })
     })
 
-    socket.on('disconnect', () => {
-      if (playerId) players.delete(playerId)
+    socket.on('disconnect', (reason) => {
+      if (!playerId) return
+      handlePlayerDisconnect(players, playerId, reason)
     })
   })
 
@@ -267,10 +322,15 @@ function broadcastRooms(io, byRoom) {
 }
 
 export function buildRoomPlayerPayload(list) {
-  return list.map(([id, p]) => ({
+  return list.map(([id, p]) => buildPlayerPayload(id, p))
+}
+
+function buildPlayerPayload(id, p) {
+  return {
     id, x: p.x, y: p.y, z: p.z, facing: p.facing, cosmeticId: p.cosmeticId, seq: p.lastSeq,
+    isReconnecting: !!p.isReconnecting,
     warp: p.warpId ? { id: p.warpId } : undefined,
-  }))
+  }
 }
 
 // The Counterweight puzzle: a weighted plate (player OR dropped item) raises a platform,
@@ -281,7 +341,7 @@ function evaluateCounterweight(io, db, byRoom, puzzleRaised) {
   if (!list) return
 
   // Weighted by any player standing on the plate (near ground level)...
-  let weighted = list.some(([, p]) => p.z < 0.6 && isOnPlate(p.x, p.y, plate))
+  let weighted = list.some(([, p]) => !p.isReconnecting && p.z < 0.6 && isOnPlate(p.x, p.y, plate))
   // ...or by any dropped world item resting on it.
   if (!weighted) {
     weighted = getWorldItems(db, roomId).some(it =>
@@ -296,6 +356,7 @@ function evaluateCounterweight(io, db, byRoom, puzzleRaised) {
 
   // Reaching the goal ledge (only possible once the platform is up) records the secret.
   for (const [id, p] of list) {
+    if (p.isReconnecting) continue
     if (!isAtGoal(p.x, p.y, p.z, goal)) continue
     // Proximity already confirmed; pass the canonical goal tile so the zone check is exact.
     const disc = checkDiscovery(db, id, {
@@ -311,6 +372,7 @@ function detectHeadBounces(io, db, byRoom, simulationTimeMs) {
   for (const [roomId, list] of byRoom) {
     for (let i = 0; i < list.length; i++) {
       const [aId, a] = list[i]
+      if (a.isReconnecting) continue
       const falling = a._prevZ !== undefined && a.z < a._prevZ - 0.001
       if (!falling) continue
       if (a._bounceCd && simulationTimeMs < a._bounceCd) continue
@@ -318,6 +380,7 @@ function detectHeadBounces(io, db, byRoom, simulationTimeMs) {
       for (let j = 0; j < list.length; j++) {
         if (i === j) continue
         const [, b] = list[j]
+        if (b.isReconnecting) continue
         const dist = Math.hypot(a.x - b.x, a.y - b.y)
         if (dist < 0.6 && a.z >= b.z && a.z <= b.z + 0.8) {
           a.socket.emit(S.BOUNCE_HEAD, { vel: BOUNCE_VEL })

@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { IsoMap } from '../IsoMap.js'
 import { Player } from '../Player.js'
 import { RemotePlayer } from '../RemotePlayer.js'
-import { getSocket } from '../net.js'
+import { getSocket, getStoredToken } from '../net.js'
 import { blockFacePoints, toScreen, topDiamondPoints, isoDepth } from '../../../shared/coordinates.js'
 import { SOCKET_EVENTS as E, TILE_H, TILE_W } from '../../../shared/constants.js'
 import { COUNTERWEIGHT } from '../../../shared/puzzles.js'
@@ -152,12 +152,32 @@ export class WorldScene extends Phaser.Scene {
 
     socket.emit(E.JOIN_ROOM, { roomId: this.roomId, fromPortal: this._fromPortal })
 
+    socket.on('disconnect', (reason) => {
+      if (reason === 'io client disconnect') return
+      this._showWorldBanner('connection lost')
+    })
+
+    socket.on('connect', () => {
+      if (!this._joined) return
+      const token = getStoredToken()
+      if (!token) return
+      socket.emit(E.AUTH, { token })
+      socket.once(E.AUTH_OK, ({ playerId }) => {
+        this.playerId = playerId
+        socket.emit(E.JOIN_ROOM, { roomId: this.roomId, fromPortal: null })
+      })
+    })
+
     socket.on(E.JOIN_OK, ({ players, worldItems, puzzle, openDoors, warp }) => {
       this._applyWarp(warp)
       this._joined = true
+      for (const remote of this.remotePlayers.values()) remote.destroy()
+      this.remotePlayers.clear()
       for (const p of players) {
         if (p.id === this.playerId) continue
-        this.remotePlayers.set(p.id, new RemotePlayer(this, p.id, p.x, p.y, p.z, p.cosmeticId))
+        const remote = new RemotePlayer(this, p.id, p.x, p.y, p.z, p.cosmeticId)
+        remote.setReconnecting(!!p.isReconnecting)
+        this.remotePlayers.set(p.id, remote)
       }
       this._renderWorldItems(worldItems)
       this._setRoomCount(players.length)
@@ -187,16 +207,21 @@ export class WorldScene extends Phaser.Scene {
         const snap = p.warp?.id != null && p.warp.id !== this.remotePlayers.get(p.id)?._lastWarpId
         if (this.remotePlayers.has(p.id)) {
           const remote = this.remotePlayers.get(p.id)
-          remote.updateTarget(p.x, p.y, p.z, p.cosmeticId, { snap })
+          remote.updateTarget(p.x, p.y, p.z, p.cosmeticId, { snap, isReconnecting: p.isReconnecting })
           if (p.warp?.id != null) remote._lastWarpId = p.warp.id
         } else {
           const remote = new RemotePlayer(this, p.id, p.x, p.y, p.z, p.cosmeticId)
+          remote.setReconnecting(!!p.isReconnecting)
           if (p.warp?.id != null) remote._lastWarpId = p.warp.id
           this.remotePlayers.set(p.id, remote)
         }
       }
       for (const [id, rp] of this.remotePlayers) {
-        if (!seen.has(id)) { rp.destroy(); this.remotePlayers.delete(id) }
+        if (!seen.has(id)) {
+          if (rp.isReconnecting) this._showWorldBanner('teammate dropped')
+          rp.destroy()
+          this.remotePlayers.delete(id)
+        }
       }
     })
 
@@ -675,5 +700,7 @@ export class WorldScene extends Phaser.Scene {
     socket.off(E.EMOTE)
     socket.off(E.ITEM_HELD)
     socket.off(E.WORLD_EVENT)
+    socket.off('connect')
+    socket.off('disconnect')
   }
 }

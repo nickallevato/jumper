@@ -7,8 +7,12 @@ export function getSocket() {
   return _socket
 }
 
+export function getStoredToken() {
+  return localStorage.getItem('jumper_token')
+}
+
 export async function authenticate() {
-  const stored = localStorage.getItem('jumper_token')
+  const stored = getStoredToken()
   try {
     const res = await fetch('/api/auth', {
       method: 'POST',

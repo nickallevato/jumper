@@ -1,0 +1,62 @@
+{
+  "baseUrl": "http://127.0.0.1:5173",
+  "checks": [
+    {
+      "name": "initial two-client visibility",
+      "passed": true,
+      "a": 10,
+      "b": 11
+    },
+    {
+      "name": "unexpected dropout shows reconnecting affordance",
+      "passed": true,
+      "remote": {
+        "id": 10,
+        "x": 8,
+        "y": 8,
+        "z": 0,
+        "isReconnecting": true,
+        "statusVisible": true
+      }
+    },
+    {
+      "name": "return within window clears reconnecting without duplicate",
+      "passed": true,
+      "remote": {
+        "id": 10,
+        "x": 8,
+        "y": 8,
+        "z": 0,
+        "isReconnecting": false,
+        "statusVisible": false
+      }
+    },
+    {
+      "name": "consented leave removes promptly",
+      "passed": true
+    },
+    {
+      "name": "timeout scenario enters reconnecting grace",
+      "passed": true,
+      "remote": {
+        "id": 10,
+        "x": 8,
+        "y": 8,
+        "z": 0,
+        "isReconnecting": true,
+        "statusVisible": true
+      }
+    },
+    {
+      "name": "timeout cleanup removes through normal path",
+      "passed": true
+    }
+  ],
+  "screenshots": [
+    "/home/na/.paperclip/instances/default/projects/654aacab-8559-490a-8428-141bb9e860f0/463253dd-ddca-463f-b5bd-983fe3417068/jumper/qa-artifacts/SMA-301/screenshots/01-dropout-reconnecting.png",
+    "/home/na/.paperclip/instances/default/projects/654aacab-8559-490a-8428-141bb9e860f0/463253dd-ddca-463f-b5bd-983fe3417068/jumper/qa-artifacts/SMA-301/screenshots/02-return-cleared.png",
+    "/home/na/.paperclip/instances/default/projects/654aacab-8559-490a-8428-141bb9e860f0/463253dd-ddca-463f-b5bd-983fe3417068/jumper/qa-artifacts/SMA-301/screenshots/03-timeout-grace.png",
+    "/home/na/.paperclip/instances/default/projects/654aacab-8559-490a-8428-141bb9e860f0/463253dd-ddca-463f-b5bd-983fe3417068/jumper/qa-artifacts/SMA-301/screenshots/04-timeout-cleanup.png"
+  ],
+  "logs": []
+}
