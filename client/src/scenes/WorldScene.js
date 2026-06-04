@@ -10,6 +10,13 @@ import { cosmeticIdForUnlock } from '../../../shared/cosmetics.js'
 import { getRoom } from '../maps.js'
 import { Sound } from '../sound.js'
 import { pruneAckedInputs } from '../reconciliation.js'
+import {
+  COOP_CAMERA_RADIUS_TILES,
+  CAMERA_TARGET_DEADBAND_PX,
+  computeCoopCameraTarget,
+  shouldMoveCameraTarget,
+  tileDistance,
+} from '../camera.js'
 
 export class WorldScene extends Phaser.Scene {
   constructor() {
@@ -30,6 +37,8 @@ export class WorldScene extends Phaser.Scene {
     this._fromPortal = data?.fromPortal ?? null
     this._lastWarpId = null
     this._joined = false
+    this._cameraTarget = null
+    this._cameraFollow = null
 
     // Detach socket handlers when this scene instance stops (e.g. on room transition),
     // so a restart doesn't stack duplicate listeners on the shared socket.
@@ -87,9 +96,13 @@ export class WorldScene extends Phaser.Scene {
     if (room.follow) {
       const b = this._computeBounds(originX, originY, room.contentBounds)
       this.cameras.main.setBounds(b.x, b.y, b.w, b.h)
-      // Snappier follow: 0.12 trailed the player ~130ms, reading as input lag.
-      // 0.3 tracks within ~50ms while still smoothing single-frame jitter.
-      this.cameras.main.startFollow(this.player.gfx, true, 0.3, 0.3)
+      const start = this._localPlayerScreen()
+      this._cameraTarget = new Phaser.Math.Vector2(start.x, start.y)
+      this._cameraFollow = this.add.rectangle(start.x, start.y, 1, 1, 0x000000, 0).setVisible(false)
+      this.cameras.main.centerOn(start.x, start.y)
+      // Follow a driven point rather than the local sprite directly: the point
+      // can blend toward nearby teammates while Phaser's lerp still damps ticks.
+      this.cameras.main.startFollow(this._cameraFollow, true, 0.22, 0.22)
     }
 
     // Brief grace so we don't instantly re-trigger the portal we just arrived through.
@@ -441,6 +454,7 @@ export class WorldScene extends Phaser.Scene {
     this.player.applyServerState(warp)
     this._pendingInputs = []
     this._lastState = this.player.getState()
+    this._syncCameraTarget({ snap: true })
   }
 
   _renderWorldItems(worldItems) {
@@ -543,7 +557,35 @@ export class WorldScene extends Phaser.Scene {
     // Interpolate remote players
     for (const rp of this.remotePlayers.values()) rp.update()
 
+    this._syncCameraTarget()
     this._updateCompass()
+  }
+
+  _localPlayerScreen() {
+    const originX = this.scale.width / 2
+    const originY = 80
+    return toScreen(this.player.tx, this.player.ty, this.player.tz, originX, originY)
+  }
+
+  _cooperativeCameraTarget() {
+    const originX = this.scale.width / 2
+    const originY = 80
+    const local = { x: this.player.tx, y: this.player.ty, z: this.player.tz }
+    const teammateScreens = []
+    for (const remote of this.remotePlayers.values()) {
+      if (tileDistance(local, remote) > COOP_CAMERA_RADIUS_TILES) continue
+      teammateScreens.push(toScreen(remote.tx, remote.ty, remote.tz, originX, originY))
+    }
+    return computeCoopCameraTarget(this._localPlayerScreen(), teammateScreens)
+  }
+
+  _syncCameraTarget({ snap = false } = {}) {
+    if (!this._cameraTarget || !this._cameraFollow) return
+    const next = this._cooperativeCameraTarget()
+    if (!snap && !shouldMoveCameraTarget(this._cameraTarget, next, CAMERA_TARGET_DEADBAND_PX)) return
+    this._cameraTarget.set(next.x, next.y)
+    this._cameraFollow.setPosition(next.x, next.y)
+    if (snap) this.cameras.main.centerOn(next.x, next.y)
   }
 
   _discoveryLabel() {
