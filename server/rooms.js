@@ -10,6 +10,7 @@ import {
 import { isValidTilePosition } from '../shared/coordinates.js'
 import { COUNTERWEIGHT, isOnPlate, isAtGoal, PLATE_RADIUS } from '../shared/puzzles.js'
 import { findDoorNear } from '../shared/doors.js'
+import { jumperMetrics, logEvent } from './metrics.js'
 
 const S = E
 export const POST_JOIN_MOVE_GRACE_MS = 250
@@ -32,6 +33,7 @@ export function handlePlayerDisconnect(players, playerId, reason, {
   setTimer = setTimeout,
   clearTimer = clearTimeout,
   windowMs = reconnectWindowMs(),
+  onDrop = () => {},
 } = {}) {
   const state = players.get(playerId)
   if (!state) return 'missing'
@@ -49,7 +51,9 @@ export function handlePlayerDisconnect(players, playerId, reason, {
   state.reconnectTimer = setTimer(() => {
     const current = players.get(playerId)
     if (!current?.isReconnecting) return
+    const roomId = current.roomId
     players.delete(playerId)
+    if (roomId) onDrop({ playerId, roomId, reason: 'reconnect_timeout' })
   }, windowMs)
   return 'reconnecting'
 }
@@ -82,6 +86,7 @@ export function attachRooms(io, db) {
 
   io.on('connection', socket => {
     let playerId = null
+    jumperMetrics.clientConnected()
 
     socket.on(S.AUTH, ({ token }) => {
       const profile = getOrCreateProfile(db, token)
@@ -94,6 +99,12 @@ export function attachRooms(io, db) {
         existing.cosmeticId = profile.cosmetic_id
         existing.isReconnecting = false
         existing.resumeRoomId = existing.roomId
+        logEvent('player_reconnect', {
+          playerId,
+          socketId: socket.id,
+          roomId: existing.roomId,
+          players: existing.roomId ? countPlayersInRoom(players, existing.roomId) : 0,
+        })
       } else {
         players.set(playerId, { socket, roomId: null, x: 8, y: 8, z: 0, facing: 'se', cosmeticId: profile.cosmetic_id, isReconnecting: false })
       }
@@ -117,7 +128,18 @@ export function attachRooms(io, db) {
       }
 
       const isResume = state.resumeRoomId === roomId
-      if (state.roomId && state.roomId !== roomId) socket.leave(state.roomId)
+      if (state.roomId && state.roomId !== roomId) {
+        const oldRoomId = state.roomId
+        socket.leave(oldRoomId)
+        jumperMetrics.playerLeftRoom(oldRoomId)
+        logEvent('player_leave', {
+          playerId,
+          socketId: socket.id,
+          roomId: oldRoomId,
+          reason: 'room_change',
+          players: countPlayersInRoom(players, oldRoomId) - 1,
+        })
+      }
       state.roomId = roomId
       state.isReconnecting = false
       state.resumeRoomId = null
@@ -134,6 +156,13 @@ export function attachRooms(io, db) {
           : null
       }
       socket.join(roomId)
+      if (!isResume) jumperMetrics.playerJoinedRoom(roomId)
+      logEvent(isResume ? 'player_rejoin' : 'player_join', {
+        playerId,
+        socketId: socket.id,
+        roomId,
+        players: countPlayersInRoom(players, roomId),
+      })
 
       const roomPlayers = [...players.entries()]
         .filter(([, p]) => p.roomId === roomId)
@@ -241,16 +270,44 @@ export function attachRooms(io, db) {
     })
 
     socket.on('disconnect', (reason) => {
+      jumperMetrics.clientDisconnected()
       if (!playerId) return
-      handlePlayerDisconnect(players, playerId, reason)
+      const state = players.get(playerId)
+      const roomId = state?.roomId
+      const result = handlePlayerDisconnect(players, playerId, reason, {
+        onDrop: ({ playerId: droppedPlayerId, roomId: droppedRoomId, reason: dropReason }) => {
+          jumperMetrics.playerLeftRoom(droppedRoomId)
+          logEvent('player_drop', {
+            playerId: droppedPlayerId,
+            roomId: droppedRoomId,
+            reason: dropReason,
+            players: countPlayersInRoom(players, droppedRoomId),
+          })
+        },
+      })
+      if (roomId) {
+        logEvent('player_leave', {
+          playerId,
+          socketId: socket.id,
+          roomId,
+          reason,
+          reconnectWindowMs: result === 'reconnecting' ? reconnectWindowMs() : undefined,
+          players: countPlayersInRoom(players, roomId),
+        })
+        if (result === 'removed') jumperMetrics.playerLeftRoom(roomId)
+      }
     })
   })
 
   createFixedStepLoop({
     step: ({ simulationTimeMs }) => {
       const byRoom = groupPlayersByRoom(players)
+      const start = performance.now()
       detectHeadBounces(io, db, byRoom, simulationTimeMs)
       evaluateCounterweight(io, db, byRoom, puzzleRaised)
+      for (const [roomId] of byRoom) {
+        jumperMetrics.recordSim(roomId, performance.now() - start)
+      }
 
       // Remember z for next simulation tick's falling check.
       for (const [, p] of players) p._prevZ = p.z
@@ -316,9 +373,27 @@ function groupPlayersByRoom(players) {
 
 function broadcastRooms(io, byRoom) {
   for (const [roomId, list] of byRoom) {
+    const start = performance.now()
     const playerList = buildRoomPlayerPayload(list)
-    io.to(roomId).emit(S.TICK, { players: playerList })
+    const encodeStart = performance.now()
+    const patch = { players: playerList }
+    const bytes = Buffer.byteLength(JSON.stringify(patch))
+    const encodeMs = performance.now() - encodeStart
+    io.to(roomId).emit(S.TICK, patch)
+    jumperMetrics.recordPatch(roomId, performance.now() - start, {
+      encodeMs,
+      bytes,
+      fanout: list.length,
+    })
   }
+}
+
+function countPlayersInRoom(players, roomId) {
+  let count = 0
+  for (const [, p] of players) {
+    if (p.roomId === roomId) count += 1
+  }
+  return count
 }
 
 export function buildRoomPlayerPayload(list) {

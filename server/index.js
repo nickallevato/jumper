@@ -7,6 +7,7 @@ import { initDb } from './db.js'
 import { generateToken, getOrCreateProfile } from './auth.js'
 import { getProfile } from './profile.js'
 import { attachRooms } from './rooms.js'
+import { logEvent, metricsHandler } from './metrics.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PORT = process.env.PORT || 3002
@@ -18,6 +19,7 @@ const io = new Server(httpServer, { cors: { origin: '*' } })
 const db = initDb(process.env.DB_PATH)
 
 app.use(express.json())
+app.get('/metrics', metricsHandler())
 
 if (isProd) {
   app.use(express.static(join(__dirname, '../dist')))
@@ -34,5 +36,5 @@ app.post('/api/auth', (req, res) => {
 attachRooms(io, db)
 
 httpServer.listen(PORT, () => {
-  console.log(`Jumper server on http://localhost:${PORT}`)
+  logEvent('server_listen', { url: `http://localhost:${PORT}`, metricsPath: '/metrics' })
 })
