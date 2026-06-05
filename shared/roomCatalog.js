@@ -249,6 +249,51 @@ export function getCatalogRoom(roomId) {
   return ROOM_CATALOG[roomId] ?? ROOM_CATALOG.overworld
 }
 
+export function cloneRoomCatalog(catalog = ROOM_CATALOG) {
+  return JSON.parse(JSON.stringify(catalog))
+}
+
+export function exportRoomCatalogSnapshot(catalog = ROOM_CATALOG) {
+  return {
+    schemaVersion: ROOM_CATALOG_SCHEMA_VERSION,
+    rooms: cloneRoomCatalog(catalog),
+  }
+}
+
+export function importRoomCatalogSnapshot(snapshot, baseCatalog = null) {
+  if (!snapshot || typeof snapshot !== 'object') {
+    throw new Error('Room catalog import must be an object')
+  }
+  if (snapshot.schemaVersion !== ROOM_CATALOG_SCHEMA_VERSION) {
+    throw new Error(`Room catalog schema ${snapshot.schemaVersion} is not supported`)
+  }
+  if (!snapshot.rooms || typeof snapshot.rooms !== 'object' || Array.isArray(snapshot.rooms)) {
+    throw new Error('Room catalog import requires a rooms object')
+  }
+
+  const rooms = cloneRoomCatalog(snapshot.rooms)
+  const errors = validateRoomCatalog(baseCatalog ? { ...baseCatalog, ...rooms } : rooms)
+  if (errors.length > 0) {
+    throw new Error(`Room catalog import is invalid:\n${errors.join('\n')}`)
+  }
+  return rooms
+}
+
+export function registerCatalogRooms(rooms) {
+  const entries = Object.entries(rooms ?? {})
+  const nextCatalog = { ...ROOM_CATALOG, ...rooms }
+  const errors = validateRoomCatalog(nextCatalog)
+  if (errors.length > 0) {
+    throw new Error(`Room catalog registration is invalid:\n${errors.join('\n')}`)
+  }
+  for (const [roomId, room] of entries) ROOM_CATALOG[roomId] = room
+  return entries.map(([roomId]) => roomId)
+}
+
+export function formatRoomCatalogSnapshot(snapshot) {
+  return `${JSON.stringify(snapshot, null, 2)}\n`
+}
+
 export function roomWallTileKeys(room) {
   return new Set((room.wallTiles ?? []).map(([tx, ty]) => `${tx},${ty}`))
 }

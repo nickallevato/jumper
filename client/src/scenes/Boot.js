@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { authenticate, getSocket } from '../net.js'
 import { SOCKET_EVENTS } from '../../../shared/constants.js'
+import { loadRuntimeRoomCatalog, roomIdFromLocation } from '../roomLaunch.js'
 
 export class Boot extends Phaser.Scene {
   constructor() { super('Boot') }
@@ -12,7 +13,10 @@ export class Boot extends Phaser.Scene {
     ).setOrigin(0.5)
 
     try {
-      const { token, profile } = await authenticate()
+      const [{ token, profile }] = await Promise.all([
+        authenticate(),
+        loadRuntimeRoomCatalog(),
+      ])
       const socket = getSocket()
 
       socket.on('connect_error', () => {
@@ -22,7 +26,7 @@ export class Boot extends Phaser.Scene {
 
       socket.emit(SOCKET_EVENTS.AUTH, { token })
       socket.once(SOCKET_EVENTS.AUTH_OK, ({ playerId }) => {
-        this.scene.start('WorldScene', { playerId, profile, roomId: 'overworld' })
+        this.scene.start('WorldScene', { playerId, profile, roomId: roomIdFromLocation() })
       })
     } catch (err) {
       text.setText('could not reach server — reload to try again')

@@ -5,6 +5,7 @@
   "scripts": {
     "dev:server": "node --watch server/index.js",
     "dev:client": "vite",
+    "dev:room-editor": "vite --open /room-editor.html",
     "build": "vite build",
     "test": "vitest run",
     "start": "NODE_ENV=production node server/index.js"

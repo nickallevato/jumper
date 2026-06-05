@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jumper Room Editor</title>
+    <script type="module" src="/src/room-editor/main.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <aside class="sidebar">
+        <header>
+          <h1>Room Editor</h1>
+          <select id="roomSelect" aria-label="Room"></select>
+        </header>
+
+        <section class="panel">
+          <h2>Paint</h2>
+          <div class="segmented" role="group" aria-label="Paint target">
+            <button data-tool="wall" type="button">Wall</button>
+            <button data-tool="platform" type="button">Platform</button>
+            <button data-tool="hidden" type="button">Hidden</button>
+            <button data-tool="portal" type="button">Portal</button>
+            <button data-tool="spawn" type="button">Spawn</button>
+          </div>
+
+          <label>
+            Tile
+            <select id="tileType">
+              <option value="1">Ground</option>
+              <option value="2">Wall</option>
+              <option value="3">Water</option>
+            </select>
+          </label>
+
+          <label>
+            Height
+            <input id="heightInput" type="number" min="0" max="8" step="0.1" value="1" />
+          </label>
+
+          <label>
+            Portal Target
+            <select id="portalTarget"></select>
+          </label>
+        </section>
+
+        <section class="panel">
+          <h2>Selection</h2>
+          <dl id="selectionStats"></dl>
+          <button id="deleteSelected" type="button">Delete Selected</button>
+        </section>
+
+        <section class="panel">
+          <h2>Import / Export</h2>
+          <div class="actions">
+            <button id="exportCatalog" type="button">Export Catalog JSON</button>
+            <button id="importCatalog" type="button">Import JSON</button>
+          </div>
+          <textarea id="catalogJson" spellcheck="false"></textarea>
+          <p id="statusLine" role="status"></p>
+        </section>
+      </aside>
+
+      <main>
+        <div id="editorCanvas"></div>
+      </main>
+    </div>
+  </body>
+</html>

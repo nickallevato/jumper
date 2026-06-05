@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "rooms": {
+    "studio_test_room": {
+      "id": "studio_test_room",
+      "name": "Studio Test Room",
+      "grid": [
+        [2, 2, 2, 2, 2, 2],
+        [2, 1, 1, 1, 1, 2],
+        [2, 1, 1, 1, 1, 2],
+        [2, 1, 1, 1, 1, 2],
+        [2, 1, 1, 1, 1, 2],
+        [2, 2, 2, 2, 2, 2]
+      ],
+      "contentBounds": {
+        "minX": 0.51,
+        "minY": 0.51,
+        "maxX": 4.49,
+        "maxY": 4.49,
+        "minZ": 0,
+        "maxZ": 1.5
+      },
+      "platforms": [
+        { "tx": 2, "ty": 2, "tz": 0.75 },
+        { "tx": 3, "ty": 2, "tz": 1.5 }
+      ],
+      "spawn": { "tx": 2, "ty": 4 },
+      "bg": "#10232b",
+      "portals": [
+        { "tx": 4, "ty": 1, "to": "overworld", "landing": { "tx": 8, "ty": 8 } }
+      ],
+      "wallTiles": [],
+      "follow": true
+    }
+  }
+}

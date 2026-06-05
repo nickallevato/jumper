@@ -1,5 +1,5 @@
 import { doorsForRoom } from '../../shared/doors.js'
-import { getCatalogRoom, ROOM_CATALOG } from '../../shared/roomCatalog.js'
+import { getCatalogRoom, registerCatalogRooms, ROOM_CATALOG } from '../../shared/roomCatalog.js'
 
 function roomForClient(room) {
   return {
@@ -17,4 +17,10 @@ export const ROOMS = Object.fromEntries(
 
 export function getRoom(roomId) {
   return ROOMS[roomId] ?? roomForClient(getCatalogRoom(roomId))
+}
+
+export function registerClientRooms(rooms) {
+  const roomIds = registerCatalogRooms(rooms)
+  for (const roomId of roomIds) ROOMS[roomId] = roomForClient(getCatalogRoom(roomId))
+  return roomIds
 }

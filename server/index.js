@@ -8,6 +8,7 @@ import { generateToken, getOrCreateProfile } from './auth.js'
 import { getProfile } from './profile.js'
 import { attachRooms } from './rooms.js'
 import { logEvent, metricsHandler } from './metrics.js'
+import { loadAuthoredRooms, roomCatalogResponse } from './authoredRooms.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PORT = process.env.PORT || 3002
@@ -17,9 +18,13 @@ const app = express()
 const httpServer = createServer(app)
 const io = new Server(httpServer, { cors: { origin: '*' } })
 const db = initDb(process.env.DB_PATH)
+const authoredRooms = loadAuthoredRooms()
 
 app.use(express.json())
 app.get('/metrics', metricsHandler())
+app.get('/api/rooms/catalog', (_req, res) => {
+  res.json(roomCatalogResponse())
+})
 
 if (isProd) {
   app.use(express.static(join(__dirname, '../dist')))
@@ -36,5 +41,9 @@ app.post('/api/auth', (req, res) => {
 attachRooms(io, db)
 
 httpServer.listen(PORT, () => {
-  logEvent('server_listen', { url: `http://localhost:${PORT}`, metricsPath: '/metrics' })
+  logEvent('server_listen', {
+    url: `http://localhost:${PORT}`,
+    metricsPath: '/metrics',
+    authoredRooms: authoredRooms.roomIds.length,
+  })
 })
