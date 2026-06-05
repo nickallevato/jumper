@@ -1,3 +1,5 @@
+import { ROOM_CATALOG, roomWallTileKeys } from './roomCatalog.js'
+
 export const TICK_MS = 50             // 20 ticks/sec authoritative simulation step
 export const SERVER_SIMULATION_STEP_MS = TICK_MS
 export const SERVER_BROADCAST_MS = 50
@@ -13,70 +15,21 @@ export const ROOM_CAP_SMALL = 6
 export const ROOM_CAP_DUNGEON = 50
 export const FALL_OUT_RECOVERY_DEPTH = 1.0
 
-export const ROOM_CONTENT_BOUNDS = {
-  overworld: {
-    minX: 0.51, minY: 0.51, maxX: 62.49, maxY: 46.49, minZ: 0, maxZ: 2.0,
-  },
-  dungeon_grove: {
-    minX: 0.51, minY: 0.51, maxX: 10.49, maxY: 10.49, minZ: 0, maxZ: 1.8,
-  },
-  dungeon_belltower: {
-    minX: 0.51, minY: 0.51, maxX: 4.49, maxY: 4.49, minZ: 0, maxZ: 5.4,
-  },
-  dungeon_library: {
-    minX: 0.51, minY: 0.51, maxX: 8.49, maxY: 8.49, minZ: 0, maxZ: 3.9,
-  },
-  dungeon_deep: {
-    minX: 0.51, minY: 0.51, maxX: 6.49, maxY: 10.49, minZ: 0, maxZ: 2.4,
-  },
-}
+export const ROOM_CONTENT_BOUNDS = Object.fromEntries(
+  Object.entries(ROOM_CATALOG).map(([roomId, room]) => [roomId, room.contentBounds])
+)
 
-export const ROOM_SPAWNS = {
-  overworld: { tx: 8, ty: 8 },
-  dungeon_grove: { tx: 8, ty: 8 },
-  dungeon_belltower: { tx: 2, ty: 4 },
-  dungeon_library: { tx: 5, ty: 8 },
-  dungeon_deep: { tx: 3, ty: 1 },
-}
+export const ROOM_SPAWNS = Object.fromEntries(
+  Object.entries(ROOM_CATALOG).map(([roomId, room]) => [roomId, room.spawn])
+)
 
-export const ROOM_PORTALS = {
-  overworld: [
-    { tx: 13, ty: 13, to: 'dungeon_grove', landing: { tx: 2, ty: 3 } },
-    { tx: 13, ty: 2, to: 'dungeon_belltower', landing: { tx: 4, ty: 3 } },
-    { tx: 2, ty: 7, to: 'dungeon_library', landing: { tx: 2, ty: 1 } },
-  ],
-  dungeon_grove: [
-    { tx: 2, ty: 2, to: 'overworld', landing: { tx: 13, ty: 14 } },
-  ],
-  dungeon_belltower: [
-    { tx: 4, ty: 4, to: 'overworld', landing: { tx: 14, ty: 2 } },
-  ],
-  dungeon_library: [
-    { tx: 1, ty: 1, to: 'overworld', landing: { tx: 3, ty: 7 } },
-  ],
-  dungeon_deep: [
-    { tx: 4, ty: 1, to: 'overworld', landing: { tx: 4, ty: 3 } },
-  ],
-}
+export const ROOM_PORTALS = Object.fromEntries(
+  Object.entries(ROOM_CATALOG).map(([roomId, room]) => [roomId, room.portals ?? []])
+)
 
-const ROOM_WALL_TILES = {
-  overworld: new Set([
-    '3,2', '4,2', '11,2', '12,2',
-    '3,3',
-    '3,4',
-    '5,6', '6,6', '9,6', '10,6',
-    '11,10', '12,10',
-    '3,11', '4,11', '11,11',
-    '3,12',
-  ]),
-  dungeon_grove: new Set([
-    '8,1', '10,1',
-    '8,2', '9,2', '10,2',
-  ]),
-  dungeon_belltower: new Set(),
-  dungeon_library: new Set(),
-  dungeon_deep: new Set(),
-}
+const ROOM_WALL_TILES = Object.fromEntries(
+  Object.entries(ROOM_CATALOG).map(([roomId, room]) => [roomId, roomWallTileKeys(room)])
+)
 
 export function contentBoundsForRoom(roomId) {
   return ROOM_CONTENT_BOUNDS[roomId] ?? ROOM_CONTENT_BOUNDS.overworld

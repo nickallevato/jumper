@@ -1,7 +1,7 @@
 # Build Tools Usage
 
 This project does not currently ship a separate visual Level Editor or Room Designer
-app. Room authoring happens in code through a small set of shared registries. Treat
+app. Room authoring happens in code through the canonical shared room catalog. Treat
 the files below as the build tools until a visual editor exists.
 
 ## Quick Start
@@ -13,8 +13,9 @@ the files below as the build tools until a visual editor exists.
    npm run dev:client
    ```
 
-2. Edit room content in `client/src/maps.js`.
-3. Keep server-visible room data in sync in `shared/constants.js`.
+2. Edit room content in `shared/roomCatalog.js`.
+3. Use `client/src/maps.js` and `shared/constants.js` as runtime adapters; both
+   derive room data from the catalog.
 4. Run the focused checks:
 
    ```sh
@@ -26,7 +27,7 @@ the files below as the build tools until a visual editor exists.
 
 ## Level Editor
 
-Use `client/src/maps.js` to author the visible level geometry.
+Use `shared/roomCatalog.js` to author the visible level geometry.
 
 - Tile grids are arrays of rows. Coordinates are `tx, ty`, with `tx` increasing
   left-to-right and `ty` increasing top-to-bottom.
@@ -46,24 +47,20 @@ movement, so client-only wall edits can create prediction corrections.
 
 ## Room Designer
 
-Use the room registry in `client/src/maps.js` and shared room metadata in
-`shared/constants.js`.
+Use the canonical room registry in `shared/roomCatalog.js`.
 
 To add a room:
 
-1. Add a grid and platform list in `client/src/maps.js`.
-2. Add a `ROOMS.<room_id>` entry with `grid`, `contentBounds`, `platforms`,
-   `spawn`, `bg`, and optional `portals`, `doors`, `hidden`, `follow`, or room
-   specific interaction data.
-3. Add matching `ROOM_CONTENT_BOUNDS` and `ROOM_SPAWNS` entries in
-   `shared/constants.js`.
-4. Add portal entries in `ROOM_PORTALS` for both directions if the room should
+1. Add a `ROOM_CATALOG.<room_id>` entry with `id`, `name`, `grid`,
+   `contentBounds`, `platforms`, `spawn`, `bg`, and optional `portals`,
+   `wallTiles`, `hidden`, `follow`, or room-specific interaction data.
+2. Add portal entries in the room's `portals` list for both directions if it should
    be reachable and returnable.
-5. Add wall collision keys to the private `ROOM_WALL_TILES` map when the room
-   contains blocking interior walls.
-6. Add locked door geometry in `shared/doors.js` when a wall tile can be opened
+3. Add wall collision coordinates to `wallTiles` when the room contains blocking
+   interior walls. `shared/constants.js` derives authoritative collision from this.
+4. Add locked door geometry in `shared/doors.js` when a wall tile can be opened
    with a key.
-7. Add secrets or unlock triggers in `server/secrets.js` when the room contains
+5. Add secrets or unlock triggers in `server/secrets.js` when the room contains
    discoverable actions.
 
 Room ids are plain strings such as `overworld`, `dungeon_grove`, or
