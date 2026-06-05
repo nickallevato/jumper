@@ -3,9 +3,10 @@ import { IsoMap } from '../IsoMap.js'
 import { Player } from '../Player.js'
 import { RemotePlayer } from '../RemotePlayer.js'
 import { getSocket, getStoredToken } from '../net.js'
-import { blockFacePoints, toScreen, topDiamondPoints, isoDepth } from '../../../shared/coordinates.js'
+import { blockFacePoints, screenToTile, toScreen, topDiamondPoints, isoDepth } from '../../../shared/coordinates.js'
 import { SOCKET_EVENTS as E, TILE_H, TILE_W } from '../../../shared/constants.js'
 import { COUNTERWEIGHT } from '../../../shared/puzzles.js'
+import { canPlaceBuild, normalizeBuildPlacement } from '../../../shared/buildMode.js'
 import { cosmeticIdForUnlock } from '../../../shared/cosmetics.js'
 import { getRoom } from '../maps.js'
 import { Sound } from '../sound.js'
@@ -39,6 +40,10 @@ export class WorldScene extends Phaser.Scene {
     this._joined = false
     this._cameraTarget = null
     this._cameraFollow = null
+    this._buildMode = false
+    this._buildPlacements = []
+    this._buildGfx = []
+    this._buildPreviewTile = null
 
     // Detach socket handlers when this scene instance stops (e.g. on room transition),
     // so a restart doesn't stack duplicate listeners on the shared socket.
@@ -73,6 +78,7 @@ export class WorldScene extends Phaser.Scene {
     const collisionPlatforms = this.riser ? [...staticPlatforms, this.riser] : staticPlatforms
 
     this.isoMap = new IsoMap(this, this.grid, originX, originY, staticPlatforms)
+    this._staticPlatforms = staticPlatforms
     this._drawPortals(originX, originY)
     this._doorGfx = new Map()
     this._drawDoors(originX, originY)
@@ -135,6 +141,7 @@ export class WorldScene extends Phaser.Scene {
       space: Phaser.Input.Keyboard.KeyCodes.SPACE,
       e: Phaser.Input.Keyboard.KeyCodes.E,
       q: Phaser.Input.Keyboard.KeyCodes.Q,
+      b: Phaser.Input.Keyboard.KeyCodes.B,
     })
 
     // Multiplayer
@@ -168,7 +175,7 @@ export class WorldScene extends Phaser.Scene {
       })
     })
 
-    socket.on(E.JOIN_OK, ({ players, worldItems, puzzle, openDoors, warp }) => {
+    socket.on(E.JOIN_OK, ({ players, worldItems, puzzle, openDoors, buildPlacements, warp }) => {
       this._applyWarp(warp)
       this._joined = true
       for (const remote of this.remotePlayers.values()) remote.destroy()
@@ -180,6 +187,7 @@ export class WorldScene extends Phaser.Scene {
         this.remotePlayers.set(p.id, remote)
       }
       this._renderWorldItems(worldItems)
+      this._setBuildPlacements(buildPlacements ?? [])
       this._setRoomCount(players.length)
       for (const d of openDoors ?? []) this._openDoor(d.tx, d.ty)
       // Snap the riser to whatever state the room is already in (no animation on join).
@@ -266,6 +274,11 @@ export class WorldScene extends Phaser.Scene {
       if (type === 'bell') { this._showWorldBanner('🔔 a bell tolls in the distance'); Sound.bell() }
     })
 
+    socket.on(E.BUILD_STATE, ({ ok, reason, buildPlacements }) => {
+      this._setBuildPlacements(buildPlacements ?? [])
+      if (ok === false) this._showWorldBanner(reason === 'range' ? 'too far' : 'cannot build there')
+    })
+
     // Authoritative held-item state: keeps the indicator + pickup gate in sync with the server.
     socket.on(E.ITEM_HELD, ({ item }) => {
       this._heldItem = item
@@ -315,6 +328,21 @@ export class WorldScene extends Phaser.Scene {
       const muted = Sound.toggleMute()
       this._showWorldBanner(muted ? 'sound off' : 'sound on')
     })
+
+    this._buildHud = this.add.text(16, 38, '', {
+      color: '#f9e2af', fontSize: '16px', fontStyle: 'bold',
+    }).setScrollFactor(0).setDepth(1000)
+    this._buildPreview = this.add.graphics().setVisible(false).setDepth(999)
+
+    this.input.keyboard.on('keydown-B', () => {
+      this._buildMode = !this._buildMode
+      this._buildPreview.setVisible(this._buildMode)
+      this._buildHud.setText(this._buildMode ? 'build' : '')
+      if (!this._buildMode) this._buildPreviewTile = null
+    })
+
+    this.input.on('pointermove', pointer => this._updateBuildPreview(pointer))
+    this.input.on('pointerdown', pointer => this._placeBuildPreview(pointer))
   }
 
   // Door markers: a distinct banded diamond on the closed door tile so it reads as a door.
@@ -344,6 +372,87 @@ export class WorldScene extends Phaser.Scene {
     this.isoMap.draw()
     const g = this._doorGfx.get(key)
     if (g) { g.destroy(); this._doorGfx.delete(key) }
+  }
+
+  _buildCandidateFromPointer(pointer) {
+    const originX = this.scale.width / 2
+    const originY = 80
+    const worldX = pointer.worldX ?? pointer.x + this.cameras.main.scrollX
+    const worldY = pointer.worldY ?? pointer.y + this.cameras.main.scrollY
+    return normalizeBuildPlacement(screenToTile(worldX, worldY, originX, originY))
+  }
+
+  _buildCandidateResult(placement) {
+    return canPlaceBuild(this.roomId, placement, {
+      player: { x: this.player.tx, y: this.player.ty },
+      existing: this._buildPlacements,
+      openDoorKeys: this._openDoors,
+      portals: this.portals,
+    })
+  }
+
+  _updateBuildPreview(pointer) {
+    if (!this._buildMode || !this._buildPreview) return
+    const placement = this._buildCandidateFromPointer(pointer)
+    this._buildPreviewTile = placement
+    this._drawBuildPreview(placement, this._buildCandidateResult(placement).ok)
+  }
+
+  _placeBuildPreview(pointer) {
+    if (!this._buildMode || pointer.button !== 0) return
+    const placement = this._buildCandidateFromPointer(pointer)
+    if (!this._buildCandidateResult(placement).ok) {
+      this._drawBuildPreview(placement, false)
+      return
+    }
+    this._socket.emit(E.BUILD_PLACE, { tx: placement.tx, ty: placement.ty })
+  }
+
+  _drawBuildPreview(placement, ok) {
+    const g = this._buildPreview
+    g.clear()
+    if (!placement) return
+    const originX = this.scale.width / 2
+    const originY = 80
+    const { x, y } = toScreen(placement.tx, placement.ty, placement.tz, originX, originY)
+    const faces = blockFacePoints(x, y, placement.tz * TILE_H + 10)
+    const color = ok ? 0xf9e2af : 0xf38ba8
+    g.fillStyle(color, 0.28)
+    g.fillPoints(faces.left, true)
+    g.fillPoints(faces.right, true)
+    g.fillStyle(color, 0.42)
+    g.fillPoints(faces.top, true)
+    g.lineStyle(2, color, 0.9)
+    g.strokePoints(faces.top, true)
+  }
+
+  _setBuildPlacements(buildPlacements) {
+    this._buildPlacements = buildPlacements.map(p => ({ ...p }))
+    for (const g of this._buildGfx) g.destroy()
+    this._buildGfx = []
+    for (const placement of this._buildPlacements) {
+      this._buildGfx.push(this._drawBuildBlock(placement))
+    }
+    this._applyReveal()
+    if (this._buildMode && this.input.activePointer) this._updateBuildPreview(this.input.activePointer)
+  }
+
+  _drawBuildBlock(placement) {
+    const originX = this.scale.width / 2
+    const originY = 80
+    const g = this.add.graphics()
+    const { x, y } = toScreen(placement.tx, placement.ty, placement.tz, originX, originY)
+    const faces = blockFacePoints(x, y, placement.tz * TILE_H + 10)
+    g.fillStyle(0xa6e3a1, 1)
+    g.fillPoints(faces.left, true)
+    g.fillStyle(0x74c7ec, 1)
+    g.fillPoints(faces.right, true)
+    g.fillStyle(0xf9e2af, 1)
+    g.fillPoints(faces.top, true)
+    g.lineStyle(2, 0x11111b, 0.45)
+    g.strokePoints(faces.top, true)
+    g.setDepth(isoDepth(placement.tx, placement.ty, placement.tz))
+    return g
   }
 
   // Bright sunken plate — visually invites stepping/dropping; pulses to read as interactive.
@@ -437,7 +546,8 @@ export class WorldScene extends Phaser.Scene {
   _applyReveal() {
     const reveal = this.player.heldItem?.passive_effect === 'reveal_hidden'
     for (const g of this._hiddenGfx ?? []) g.setVisible(reveal)
-    this.player.setPlatforms(reveal ? [...this._basePlatforms, ...this._hidden] : this._basePlatforms)
+    const revealed = reveal ? this._hidden : []
+    this.player.setPlatforms([...this._basePlatforms, ...revealed, ...this._buildPlacements])
   }
 
   // Glowing portal markers — step onto one to travel to another room. Each destination
@@ -700,6 +810,7 @@ export class WorldScene extends Phaser.Scene {
     socket.off(E.EMOTE)
     socket.off(E.ITEM_HELD)
     socket.off(E.WORLD_EVENT)
+    socket.off(E.BUILD_STATE)
     socket.off('connect')
     socket.off('disconnect')
   }

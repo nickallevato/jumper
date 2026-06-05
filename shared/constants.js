@@ -1,4 +1,4 @@
-import { ROOM_CATALOG, roomWallTileKeys } from './roomCatalog.js'
+import { ROOM_CATALOG, getCatalogRoom, roomWallTileKeys } from './roomCatalog.js'
 
 export const TICK_MS = 50             // 20 ticks/sec authoritative simulation step
 export const SERVER_SIMULATION_STEP_MS = TICK_MS
@@ -32,16 +32,16 @@ const ROOM_WALL_TILES = Object.fromEntries(
 )
 
 export function contentBoundsForRoom(roomId) {
-  return ROOM_CONTENT_BOUNDS[roomId] ?? ROOM_CONTENT_BOUNDS.overworld
+  return ROOM_CONTENT_BOUNDS[roomId] ?? getCatalogRoom(roomId).contentBounds ?? ROOM_CONTENT_BOUNDS.overworld
 }
 
 export function spawnForRoom(roomId) {
-  return ROOM_SPAWNS[roomId] ?? ROOM_SPAWNS.overworld
+  return ROOM_SPAWNS[roomId] ?? getCatalogRoom(roomId).spawn ?? ROOM_SPAWNS.overworld
 }
 
 export function findPortal(roomId, { tx, ty, to } = {}) {
   if (!Number.isFinite(tx) || !Number.isFinite(ty)) return null
-  return (ROOM_PORTALS[roomId] ?? []).find(portal =>
+  return (ROOM_PORTALS[roomId] ?? getCatalogRoom(roomId).portals ?? []).find(portal =>
     portal.tx === tx && portal.ty === ty && (to == null || portal.to === to)
   ) ?? null
 }
@@ -80,7 +80,8 @@ export function isRoomPositionPassable(roomId, { x, y }, openDoorKeys = new Set(
   const b = contentBoundsForRoom(roomId)
   if (x < b.minX || x > b.maxX || y < b.minY || y > b.maxY) return false
   const key = `${Math.round(x)},${Math.round(y)}`
-  return !ROOM_WALL_TILES[roomId]?.has(key) || openDoorKeys.has(key)
+  const wallTiles = ROOM_WALL_TILES[roomId] ?? roomWallTileKeys(getCatalogRoom(roomId))
+  return !wallTiles.has(key) || openDoorKeys.has(key)
 }
 
 export function clampAllowedRoomPosition(roomId, current, next, openDoorKeys = new Set()) {
@@ -134,4 +135,6 @@ export const SOCKET_EVENTS = {
   EMOTE:         'emote',
   ITEM_HELD:     'item:held',
   WORLD_EVENT:   'world:event',
+  BUILD_PLACE:   'build:place',
+  BUILD_STATE:   'build:state',
 }

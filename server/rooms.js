@@ -8,8 +8,14 @@ import {
   clampAllowedRoomPosition, fallOutRecoveryPosition, isFallOutPosition, landingForPortalTransition, spawnForRoom,
 } from '../shared/constants.js'
 import { isValidTilePosition } from '../shared/coordinates.js'
+import { getCatalogRoom } from '../shared/roomCatalog.js'
 import { COUNTERWEIGHT, isOnPlate, isAtGoal, PLATE_RADIUS } from '../shared/puzzles.js'
 import { findDoorNear } from '../shared/doors.js'
+import {
+  buildPlacementKey,
+  canPlaceBuild,
+  normalizeBuildPlacement,
+} from '../shared/buildMode.js'
 import { jumperMetrics, logEvent } from './metrics.js'
 
 const S = E
@@ -83,6 +89,8 @@ export function attachRooms(io, db) {
   const puzzleRaised = new Map()
   // roomId → Set of "tx,ty" door tiles that have been opened
   const openDoors = new Map()
+  // roomId → prototype player-placed build blocks, kept in memory for this session.
+  const buildPlacements = new Map()
 
   io.on('connection', socket => {
     let playerId = null
@@ -177,6 +185,7 @@ export function attachRooms(io, db) {
         worldItems: getWorldItems(db, roomId),
         puzzle: { raised: !!puzzleRaised.get(roomId) },
         openDoors: doors,
+        buildPlacements: buildPlacements.get(roomId) ?? [],
         warp: { id: state.warpId, x: state.x, y: state.y, z: state.z },
       })
       socket.emit(S.ITEM_HELD, { item: heldItemInfo(db, playerId) })
@@ -250,6 +259,33 @@ export function attachRooms(io, db) {
         })
         if (disc) socket.emit(S.DISCOVER_OK, disc)
       }
+    })
+
+    socket.on(S.BUILD_PLACE, (payload) => {
+      if (!playerId) return
+      const state = players.get(playerId)
+      if (!state?.roomId || state.isReconnecting) return
+      const placement = normalizeBuildPlacement(payload)
+      const roomPlacements = buildPlacements.get(state.roomId) ?? []
+      const result = canPlaceBuild(state.roomId, placement, {
+        player: { x: state.x, y: state.y },
+        existing: roomPlacements,
+        openDoorKeys: openDoors.get(state.roomId) ?? new Set(),
+        portals: getCatalogRoom(state.roomId).portals ?? [],
+      })
+      if (!result.ok) {
+        socket.emit(S.BUILD_STATE, { ok: false, reason: result.reason, buildPlacements: roomPlacements })
+        return
+      }
+      const next = [...roomPlacements, placement]
+      buildPlacements.set(state.roomId, next)
+      logEvent('build_place', {
+        playerId,
+        roomId: state.roomId,
+        tile: buildPlacementKey(placement),
+        count: next.length,
+      })
+      io.to(state.roomId).emit(S.BUILD_STATE, { ok: true, buildPlacements: next })
     })
 
     socket.on(S.EMOTE, ({ type }) => {
