@@ -7,6 +7,7 @@ import {
 } from '../../../shared/roomCatalog.js'
 import { TILE_H, TILE_W } from '../../../shared/constants.js'
 import { toScreen } from '../../../shared/coordinates.js'
+import { deleteSelectedFromRoom } from './deleteSelection.js'
 import './styles.css'
 
 const TILE_COLORS = {
@@ -141,13 +142,7 @@ function deleteSelected() {
   const selected = state.selected
   if (!selected) return
 
-  if (selected.type === 'tile') {
-    room.grid[selected.ty][selected.tx] = 1
-    removeWallTile(room, selected.tx, selected.ty)
-  } else if (selected.type === 'platform' || selected.type === 'hidden' || selected.type === 'portal') {
-    room[selected.type].splice(selected.index, 1)
-  }
-  state.selected = null
+  if (deleteSelectedFromRoom(room, selected)) state.selected = null
 }
 
 function formatSelection() {
